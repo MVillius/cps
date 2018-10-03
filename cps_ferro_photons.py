@@ -20,6 +20,7 @@ I = qt.identity(2)
 orbital_number = 1
 ops = {}
 
+fock_size = 2
 aLeft, aRight = I,I
 
 for i_ops in range(8*orbital_number): # 8=2(spin)*2(K,Kp)*2(left/right)
@@ -33,8 +34,8 @@ for i_ops in range(8*orbital_number):
     while ksz > 0:
         ops[i_ops] = qt.tensor(-sz, ops[i_ops]) # pad with -sz to the left
         ksz -= 1
-    ops[i_ops] = qt.tensor(ops[i_ops],I)  #pad 2 I for photons
-    ops[i_ops] = qt.tensor(ops[i_ops],I)
+    ops[i_ops] = qt.tensor(ops[i_ops],qt.identity(fock_size))  #pad 2 I for photons
+    ops[i_ops] = qt.tensor(ops[i_ops],qt.identity(fock_size))
 for k in range(8*orbital_number-1):
     aLeft = qt.tensor(aLeft,I)
     aRight = qt.tensor(aRight,I)
@@ -50,10 +51,10 @@ LDoKp = ops[5]
 RUpKp = ops[6]
 RDoKp = ops[7]
 
-aLeft = qt.tensor(aLeft, qt.destroy(2))
-aRight = qt.tensor(aRight, I)
-aLeft = qt.tensor(aLeft, I)
-aRight = qt.tensor(aRight, qt.destroy(2))
+aLeft = qt.tensor(aLeft, qt.destroy(fock_size))
+aRight = qt.tensor(aRight, qt.identity(fock_size))
+aLeft = qt.tensor(aLeft, qt.identity(fock_size))
+aRight = qt.tensor(aRight, qt.destroy(fock_size))
 
 nL = LUpK.dag()*LUpK + LDoK.dag()*LDoK + LUpKp.dag()*LUpKp + LDoKp.dag()*LDoKp
 nR = RUpK.dag()*RUpK + RDoK.dag()*RDoK + RUpKp.dag()*RUpKp + RDoKp.dag()*RDoKp
@@ -65,15 +66,15 @@ ntot = nL + nR
 
 II = I
 zero = qt.tensor(qt.fock(2,1)) 
-zero_photons = qt.tensor(qt.fock(2,0))
+zero_photons = qt.tensor(qt.fock(fock_size,0))
 vac = zero
 for i_ops in range(8*orbital_number+1):
-    II = qt.tensor(I,II)
     if i_ops<8*orbital_number-1:
+        II = qt.tensor(I,II)
         vac = qt.tensor(vac, zero)
     else:
+        II = qt.tensor(II, qt.identity(fock_size))
         vac = qt.tensor(vac, zero_photons)
-
 
 
 for k1, op1 in ops.items():
@@ -82,6 +83,7 @@ for k1, op1 in ops.items():
             assert op1.dag()*op2+op2*op1.dag() == II
         else:
             assert op1.dag()*op2+op2*op1.dag() == 0*II
+
 
 class CPSF:
     
@@ -113,23 +115,23 @@ class CPSF:
                 e_RDo*(RDoK.dag()*RDoK + RDoKp.dag()*RDoKp)
 
         Hteh = teh*np.cos(theta/2)*(LUpK.dag()*RDoKp.dag() - LDoKp.dag()*RUpK.dag()) +\
-        	   teh*np.cos(theta/2)*(LUpKp.dag()*RDoK.dag() - LDoK.dag()*RUpKp.dag()) +\
+        	      teh*np.cos(theta/2)*(LUpKp.dag()*RDoK.dag() - LDoK.dag()*RUpKp.dag()) +\
                teh*np.sin(theta/2)*(LUpK.dag()*RUpKp.dag() + LDoKp.dag()*RDoK.dag()) +\
                teh*np.sin(theta/2)*(LUpKp.dag()*RUpK.dag() + LDoK.dag()*RDoKp.dag())
         Hteh += Hteh.dag()
         
         Htee = tee*np.cos(theta/2)*(LUpK.dag()*RUpK + LDoK.dag()*RDoK+\
-                                     LUpKp.dag()*RUpKp + LDoKp.dag()*RDoKp) +\
+                                    LUpKp.dag()*RUpKp + LDoKp.dag()*RDoKp) +\
                tee*np.sin(theta/2)*(-LUpK.dag()*RDoK + LDoK.dag()*RUpK+\
                                     -LUpKp.dag()*RDoKp + LDoKp.dag()*RUpKp)
         Htee += Htee.dag()
         
         Hint = (U/2)*(nL*(nL-1)+nR*(nR-1)) + Um*nL*nR
         
-        HKKp = DeltaKKp * (LUpK.dag()*LUpK+LDoK.dag()*LDoK+\
-                           RUpK.dag()*RUpK+RDoK.dag()*RDoK-\
-                           LUpKp.dag()*LUpKp-LDoKp.dag()*LDoKp-\
-                           RUpKp.dag()*RUpKp-RDoKp.dag()*RDoKp)
+        HKKp = DeltaKKp * (LUpK.dag()*LUpK + LDoK.dag()*LDoK +\
+                           RUpK.dag()*RUpK + RDoK.dag()*RDoK -\
+                           LUpKp.dag()*LUpKp - LDoKp.dag()*LDoKp -\
+                           RUpKp.dag()*RUpKp - RDoKp.dag()*RDoKp)
         
         #self.H = Hchem + Hteh + Htee + Hint + HKKp + Hphoton + Hcavite
         self.H0 = Hchem + Hint + Hphoton
@@ -454,23 +456,30 @@ DeltaKKp = 0
 e_sum = 100
 e_mag, theta, mag_asym = -5, np.pi/2, 0.05
 omega0 =  -2*e_mag*(1+mag_asym) #-2bl
-t_lim = np.pi/(4*np.sqrt(2)*teh)
+t_lim = 20 #np.pi/(4*np.sqrt(2)*teh)
 
 #Définition d'observables et d'opérateurs
 
 nUp = LUpK.dag()*LUpK + LUpKp.dag()*LUpKp +RUpK.dag()*RUpK+ RUpKp.dag()*RUpKp 
 nDo = LDoK.dag()*LDoK + LDoKp.dag()*LDoKp +RDoK.dag()*RDoK+ RDoKp.dag()*RDoKp 
-psi0 = vac
+#psi0 = vac
+psi0 = (LUpK.dag()*RDoKp.dag()-LDoKp.dag()*RUpK.dag())*vac+\
+          (LUpKp.dag()*RDoK.dag()-LDoK.dag()*RUpKp.dag())*vac
 Ppsi0 = psi0*psi0.dag()
 down = (LDoK.dag()*LDoKp.dag())*vac
 down /= down.norm()
 Pdown = down*down.dag()
-nl_t,nr_t,down_t, up_t, tot, photons,tt= [],[],[],[],[],[],[]
+ddown_left = (LDoK.dag()+LDoKp.dag())*(RDoK.dag()+RDoKp.dag())*aLeft.dag()*vac
+ddown_left = ddown_left.unit()
+ddown_right = (LDoK.dag()+LDoKp.dag())*(RDoK.dag()+RDoKp.dag())*aRight.dag()*vac
+ddown_right = ddown_right.unit()
+nl_t,nr_t,down_t, up_t, tot, photons, tt = [],[],[],[],[],[],[]
+overlap_psi0, overlap_ddl, overlap_ddr = [],[],[]
 
 #Etape 1 
 e_sum,e_diff = -Um,0 
 
-cpsf3 = CPSF(e_sum, e_diff, e_mag, theta, mag_asym,omega0)
+cpsf3 = CPSF(e_sum, e_diff, e_mag, theta, mag_asym, omega0)
 H = cpsf3.H
 times2 = np.linspace(0,t_lim, 1000)
 
@@ -482,29 +491,32 @@ for i,t in enumerate(times2):
     down_t.append(qt.expect(nDo,result2.states[i]))
     tot.append(qt.expect(ntot,result2.states[i]))
     photons.append(qt.expect(aLeft.dag()*aLeft, result2.states[i]))
+    overlap_ddl.append(qt.expect(ddown_left*ddown_left.dag(), result2.states[i]))
+    overlap_ddr.append(qt.expect(ddown_right*ddown_right.dag(), result2.states[i]))
+    overlap_psi0.append(qt.expect(Ppsi0, result2.states[i]))
 
     tt.append(t)
 
-#Etape 2
-
-e_sum,e_diff  = 100,(U-Um+2*e_mag)
-singlet = (LUpK.dag()*RDoKp.dag()-LDoKp.dag()*RUpK.dag())*vac+\
-          (LUpKp.dag()*RDoK.dag()-LDoK.dag()*RUpKp.dag())*vac
-triplet = (LUpK.dag()*RDoKp.dag()+LDoKp.dag()*RUpK.dag())*vac+\
-          (LUpKp.dag()*RDoK.dag()+LDoK.dag()*RUpKp.dag())*vac
-singlet = singlet/singlet.norm()
-triplet = triplet/triplet.norm()
-times3 = np.linspace(0,  1, 1000)
-cpsf4 = CPSF(e_sum, e_diff, e_mag, theta, mag_asym,omega0)
-result3 = qt.mesolve(cpsf4.H, result2.states[-1], times3, [], []) #part avec le dernier état du précédent mesolve
-for i,t in enumerate(times3):
-    nl_t.append(qt.expect(nL, result3.states[i]))
-    nr_t.append(qt.expect(nR,result3.states[i]))
-    up_t.append(qt.expect(nUp, result3.states[i]))
-    down_t.append(qt.expect(nDo,result3.states[i]))
-    tot.append(qt.expect(ntot,result3.states[i]))
-    photons.append(qt.expect(aLeft.dag()*aLeft, result3.states[i]))
-    tt.append(t+t_lim)
+##Etape 2
+#
+#e_sum,e_diff  = 100,(U-Um+2*e_mag)
+#singlet = (LUpK.dag()*RDoKp.dag()-LDoKp.dag()*RUpK.dag())*vac+\
+#          (LUpKp.dag()*RDoK.dag()-LDoK.dag()*RUpKp.dag())*vac
+#triplet = (LUpK.dag()*RDoKp.dag()+LDoKp.dag()*RUpK.dag())*vac+\
+#          (LUpKp.dag()*RDoK.dag()+LDoK.dag()*RUpKp.dag())*vac
+#singlet = singlet/singlet.norm()
+#triplet = triplet/triplet.norm()
+#times3 = np.linspace(0,  1, 1000)
+#cpsf4 = CPSF(e_sum, e_diff, e_mag, theta, mag_asym, omega0)
+#result3 = qt.mesolve(cpsf4.H, result2.states[-1], times3, [], []) #part avec le dernier état du précédent mesolve
+#for i,t in enumerate(times3):
+#    nl_t.append(qt.expect(nL, result3.states[i]))
+#    nr_t.append(qt.expect(nR,result3.states[i]))
+#    up_t.append(qt.expect(nUp, result3.states[i]))
+#    down_t.append(qt.expect(nDo,result3.states[i]))
+#    tot.append(qt.expect(ntot,result3.states[i]))
+#    photons.append(qt.expect(aLeft.dag()*aLeft, result3.states[i]))
+#    tt.append(t+t_lim)
 
 fig, ax = plt.subplots()
 ax.set_xlabel('Time')
@@ -515,6 +527,16 @@ ax.plot(tt, up_t,label="nUp")
 ax.plot(tt, down_t,label="nDo")
 ax.plot(tt, photons,label="nb photons")
 ax.plot(tt, tot,label="nTot")
+
+ax.legend()
+plt.show() 
+
+fig, ax = plt.subplots()
+ax.set_xlabel('Time')
+ax.set_ylabel('$|<test|\phi_t>|^2$')
+ax.plot(tt, overlap_psi0,label="$\Psi_0$")
+ax.plot(tt, overlap_ddl,label="$|\downarrow,\downarrow,1,0>$")
+ax.plot(tt, overlap_ddr,label="$|\downarrow,\downarrow,0,1>$")
 
 ax.legend()
 plt.show() 
