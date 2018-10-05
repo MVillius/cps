@@ -21,6 +21,7 @@ orbital_number = 1
 ops = {}
 
 aLeft, aRight = I,I
+III = qt.qeye(3)
 
 for i_ops in range(8*orbital_number): # 8=2(spin)*2(K,Kp)*2(left/right)
     ops[i_ops] = sm  #initialize
@@ -33,8 +34,8 @@ for i_ops in range(8*orbital_number):
     while ksz > 0:
         ops[i_ops] = qt.tensor(-sz, ops[i_ops]) # pad with -sz to the left
         ksz -= 1
-    ops[i_ops] = qt.tensor(ops[i_ops],I)  #pad 2 I for photons
-    ops[i_ops] = qt.tensor(ops[i_ops],I)
+    ops[i_ops] = qt.tensor(ops[i_ops],III)  #pad 2 I for photons
+    ops[i_ops] = qt.tensor(ops[i_ops],III)
 for k in range(8*orbital_number-1):
     aLeft = qt.tensor(aLeft,I)
     aRight = qt.tensor(aRight,I)
@@ -50,30 +51,45 @@ LDoKp = ops[5]
 RUpKp = ops[6]
 RDoKp = ops[7]
 
-aLeft = qt.tensor(aLeft, qt.destroy(2))
-aRight = qt.tensor(aRight, I)
-aLeft = qt.tensor(aLeft, I)
-aRight = qt.tensor(aRight, qt.destroy(2))
+
+aLeft = qt.tensor(aLeft, qt.destroy(3))
+aRight = qt.tensor(aRight, III)
+aLeft = qt.tensor(aLeft, III)
+aRight = qt.tensor(aRight, qt.destroy(3))
 
 nL = LUpK.dag()*LUpK + LDoK.dag()*LDoK + LUpKp.dag()*LUpKp + LDoKp.dag()*LDoKp
 nR = RUpK.dag()*RUpK + RDoK.dag()*RDoK + RUpKp.dag()*RUpKp + RDoKp.dag()*RDoKp
+nUp = LUpK.dag()*LUpK + LUpKp.dag()*LUpKp +RUpK.dag()*RUpK+ RUpKp.dag()*RUpKp 
+nDo = LDoK.dag()*LDoK + LDoKp.dag()*LDoKp +RDoK.dag()*RDoK+ RDoKp.dag()*RDoKp
 
 nPhL = aLeft.dag()*aLeft
 nPhR = aRight.dag()*aRight
 nPhTot = nPhL + nPhR
 ntot = nL + nR
+SX, SY, SZ = [],[],[]
+ops_b = [LUpK, LDoK, LUpKp, LDoKp, RUpK, RDoK, RUpKp, RDoKp]
 
+for iSide in range(2):
+    for iK in range(2):
+        SZ.append(ops_b[iK*2+iSide*4].dag()*ops_b[iK*2+iSide*4]-ops_b[iK*2+iSide*4+1].dag()*ops_b[iK*2+iSide*4+1])
+        SY.append(1j*(ops_b[iK*2+iSide*4+1].dag()*ops_b[iK*2+iSide*4]-ops_b[iK*2+iSide*4].dag()*ops_b[iK*2+iSide*4+1]))
+        SX.append(ops_b[iK*2+iSide*4].dag()*ops_b[iK*2+iSide*4+1]+ops_b[iK*2+iSide*4+1].dag()*ops_b[iK*2+iSide*4])
+
+S_X = SX[0]+SX[1]+SX[2]+SX[3]
+S_Y = SY[0]+SY[1]+SY[2]+SY[3]
+S_Z = SZ[0]+SZ[1]+SZ[2]+SZ[3]
+S_tot = S_X**2+S_Y**2+S_Z**2
 II = I
 zero = qt.tensor(qt.fock(2,1)) 
-zero_photons = qt.tensor(qt.fock(2,0))
+zero_photons = qt.tensor(qt.fock(3,0))
 vac = zero
 for i_ops in range(8*orbital_number+1):
-    II = qt.tensor(I,II)
     if i_ops<8*orbital_number-1:
         vac = qt.tensor(vac, zero)
+        II = qt.tensor(II,I)
     else:
         vac = qt.tensor(vac, zero_photons)
-
+        II = qt.tensor(II,III)
 
 
 for k1, op1 in ops.items():
@@ -83,6 +99,7 @@ for k1, op1 in ops.items():
         else:
             assert op1.dag()*op2+op2*op1.dag() == 0*II
 
+#assert qt.commutator(aRight, aRight.dag())==I
 class CPSF:
     
     def __init__(self,e_sum,e_diff,e_mag,theta,mag_asym, omega):
@@ -113,7 +130,7 @@ class CPSF:
                 e_RDo*(RDoK.dag()*RDoK + RDoKp.dag()*RDoKp)
 
         Hteh = teh*np.cos(theta/2)*(LUpK.dag()*RDoKp.dag() - LDoKp.dag()*RUpK.dag()) +\
-        	   teh*np.cos(theta/2)*(LUpKp.dag()*RDoK.dag() - LDoK.dag()*RUpKp.dag()) +\
+               teh*np.cos(theta/2)*(LUpKp.dag()*RDoK.dag() - LDoK.dag()*RUpKp.dag()) +\
                teh*np.sin(theta/2)*(LUpK.dag()*RUpKp.dag() + LDoKp.dag()*RDoK.dag()) +\
                teh*np.sin(theta/2)*(LUpKp.dag()*RUpK.dag() + LDoK.dag()*RDoKp.dag())
         Hteh += Hteh.dag()
@@ -435,45 +452,60 @@ def trace(e_sum, e_diff, e_mag, theta, mag_asym,omega0): #Affichage des états p
         for kk in range(ii, len(st)):
             t = st[kk]
             tmp = np.abs(s.overlap(H1*t))
-            if scatter[ii]!=(-1,-1) and scatter[kk]!=(-1,-1) and ii!=kk and tmp>10**-8  and nrj[ii]>=100 and nrj[kk]>=100 and nrj[ii]<=200 and nrj[kk]<=200:
+            if scatter[ii]!=(-1,-1) and scatter[kk]!=(-1,-1) and ii!=kk and tmp>10**-8  and nrj[ii]>=200 and nrj[kk]>=200:
                 xx,yy = scatter[ii]
                 xx2,yy2 = scatter[kk]
-                plt.plot([xx,xx2],[yy,yy2],linewidth=tmp)
+                plt.plot([xx,xx2],[yy,yy2],linewidth=tmp*5)
 
     print("end")
     plt.show()
     #return scatter
-
+def info_st(s,nrj):
+    print("Informations sur l'état ")
+    print("Energie : "+str(round(nrj,3)))
+    print("Gauche : "+str(round(qt.expect(nL, s),2))+" Droite : "+str(round(qt.expect(nR, s),2)))
+    print("Up : "+str(round(qt.expect(nUp, s),2))+ " Down : "+str(round(qt.expect(nDo, s),2)))
+    print("Photons g. : "+str(round(qt.expect(aLeft.dag()*aLeft, s),2)))
+    print("S_tot : "+str(round(qt.expect(S_tot,s),2))+" S_z : "+str(round(qt.expect(S_Z, s),2)))
+    print("----------------------")
 #Parameters
 
 U = 250
 Um = 20
 teh =0.1
-tee = 1
+tee = 0.1
 DeltaKKp = 0
-e_sum = 100
+e_sum = 50
 e_mag, theta, mag_asym = -5, np.pi/2, 0.05
 omega0 =  -2*e_mag*(1+mag_asym) #-2bl
 t_lim = np.pi/(4*np.sqrt(2)*teh)
 
 #Définition d'observables et d'opérateurs
 
-nUp = LUpK.dag()*LUpK + LUpKp.dag()*LUpKp +RUpK.dag()*RUpK+ RUpKp.dag()*RUpKp 
-nDo = LDoK.dag()*LDoK + LDoKp.dag()*LDoKp +RDoK.dag()*RDoK+ RDoKp.dag()*RDoKp 
+ 
 psi0 = vac
 Ppsi0 = psi0*psi0.dag()
 down = (LDoK.dag()*LDoKp.dag())*vac
 down /= down.norm()
 Pdown = down*down.dag()
-nl_t,nr_t,down_t, up_t, tot, photons,tt= [],[],[],[],[],[],[]
 
+
+
+nl_t,nr_t,down_t, up_t, tot, photons,spins,sz,tt= [],[],[],[],[],[],[],[],[]
 #Etape 1 
 e_sum,e_diff = -Um,0 
+cpsf = CPSF(e_sum, e_diff, e_mag, theta, mag_asym,10.47)
+cpsf.diagonalize()
+for e in range(len(cpsf.states)):
+    if np.abs(qt.expect(S_tot,cpsf.states[e])) <10**-1:
+        print("Debug : state n°"+str(e)+"@"+str(round(cpsf.energies[e], 4))+" GHz; nL/nR : "+str(round(qt.expect(nL, cpsf.states[e]),4))+" "+str(round(qt.expect(nR, cpsf.states[e]),4))+" photons : "+
+            str(round(qt.expect(nPhL,cpsf.states[e]),4))+" , s_tot : "+str(round(qt.expect(S_tot, cpsf.states[e]),4))+ ", sz "+str(round(qt.expect(S_Z,cpsf.states[e]),4)))
 
 cpsf3 = CPSF(e_sum, e_diff, e_mag, theta, mag_asym,omega0)
 H = cpsf3.H
 times2 = np.linspace(0,t_lim, 1000)
 
+"""
 result2 = qt.mesolve(H, psi0, times2, [], [])
 for i,t in enumerate(times2):
     nl_t.append(qt.expect(nL, result2.states[i]))
@@ -481,45 +513,70 @@ for i,t in enumerate(times2):
     up_t.append(qt.expect(nUp, result2.states[i]))
     down_t.append(qt.expect(nDo,result2.states[i]))
     tot.append(qt.expect(ntot,result2.states[i]))
+    spins.append(qt.expect(S_tot,result2.states[i]))
+
     photons.append(qt.expect(aLeft.dag()*aLeft, result2.states[i]))
 
     tt.append(t)
-
+"""
 #Etape 2
 
-e_sum,e_diff  = 100,(U-Um+2*e_mag)
+e_sum,e_diff  = 200,(U-Um+2*e_mag)
+
+
+
+#cur_st = cpsf3.states[55]
+#print(info_st(cur_st, cpsf3.energies[55]))
+
 singlet = (LUpK.dag()*RDoKp.dag()-LDoKp.dag()*RUpK.dag())*vac+\
           (LUpKp.dag()*RDoK.dag()-LDoK.dag()*RUpKp.dag())*vac
 triplet = (LUpK.dag()*RDoKp.dag()+LDoKp.dag()*RUpK.dag())*vac+\
           (LUpKp.dag()*RDoK.dag()+LDoK.dag()*RUpKp.dag())*vac
 singlet = singlet/singlet.norm()
 triplet = triplet/triplet.norm()
-times3 = np.linspace(0,  1, 1000)
-cpsf4 = CPSF(e_sum, e_diff, e_mag, theta, mag_asym,omega0)
-result3 = qt.mesolve(cpsf4.H, result2.states[-1], times3, [], []) #part avec le dernier état du précédent mesolve
-for i,t in enumerate(times3):
-    nl_t.append(qt.expect(nL, result3.states[i]))
-    nr_t.append(qt.expect(nR,result3.states[i]))
-    up_t.append(qt.expect(nUp, result3.states[i]))
-    down_t.append(qt.expect(nDo,result3.states[i]))
-    tot.append(qt.expect(ntot,result3.states[i]))
-    photons.append(qt.expect(aLeft.dag()*aLeft, result3.states[i]))
-    tt.append(t+t_lim)
 
-fig, ax = plt.subplots()
-ax.set_xlabel('Time')
-ax.set_ylabel('Expectation values')
-ax.plot(tt, nl_t,label="nL")
-ax.plot(tt, nr_t,label="nR")
-ax.plot(tt, up_t,label="nUp")
-ax.plot(tt, down_t,label="nDo")
-ax.plot(tt, photons,label="nb photons")
-ax.plot(tt, tot,label="nTot")
+#print(info_st(triplet, 220.5))
+e_1 = (LDoK.dag()*LDoKp.dag())*vac
+e_2 = (RUpK.dag()*RUpKp.dag())*vac
+e_3 = (LDoK.dag()*RDoKp.dag())*vac
+e_3 = (LDoK.dag()*RUpKp.dag())*vac
 
-ax.legend()
-plt.show() 
+#print(qt.expect(S_tot, singlet))
+#print(qt.expect(S_tot, triplet))
+#print(qt.expect(S_tot, e_1))
+#print(qt.expect(S_tot, e_3))
 
-#trace(e_sum,e_diff,e_mag,theta,mag_asym, omega0)
+times3 = np.linspace(0,  15, 3000)
+if 1==1:
+    cpsf4 = CPSF(e_sum, e_diff, e_mag, theta, mag_asym,10.503)
+    result3 = qt.mesolve(cpsf4.H, singlet, times3, [], []) #part avec le dernier état du précédent mesolve
+    for i,t in enumerate(times3):
+        nl_t.append(qt.expect(nL, result3.states[i]))
+        nr_t.append(qt.expect(nR,result3.states[i]))
+        up_t.append(qt.expect(nUp, result3.states[i]))
+        down_t.append(qt.expect(nDo,result3.states[i]))
+        tot.append(qt.expect(ntot,result3.states[i]))
+        spins.append(qt.expect(S_tot,result3.states[i]))
+        sz.append(qt.expect(S_Z, result3.states[i]))
+        photons.append(qt.expect(aLeft.dag()*aLeft, result3.states[i]))
+        tt.append(t+t_lim)
+
+    fig, ax = plt.subplots()
+    ax.set_xlabel('Time')
+    ax.set_ylabel('Expectation values')
+    ax.plot(tt, nl_t,label="nL")
+    ax.plot(tt, nr_t,label="nR")
+    ax.plot(tt, up_t,label="nUp")
+    ax.plot(tt, down_t,label="nDo")
+    ax.plot(tt, photons,label="nb photons")
+    ax.plot(tt, spins, label="Spin total")
+    ax.plot(tt, sz, label="Spin z")
+    ax.plot(tt, tot,label="nTot")
+
+    ax.legend()
+    plt.show() 
+
+trace(e_sum,e_diff,e_mag,theta,mag_asym, omega0)
 
 print("----- PARAMETRES -----")
 print("e_sigma : "+str(e_sum))
@@ -529,20 +586,22 @@ print("---------------------")
 
 
 
-if 1==0: #Mode debug, plot de tous les états propres du Hamiltonien dans la plage d'énergie pertinente
-    start = 19
-    end  = 50
-    OMEGA_START  = 10.46
-    OMEGA_END = 10.58
-    omegas = np.linspace(OMEGA_START,OMEGA_END,30) #balayage en fréquence
-    states = [[] for k in range(start,end)]
+if 1==1: #Mode debug, plot de tous les états propres du Hamiltonien dans la plage d'énergie pertinente
+    start = 45
+    end  = 83
+    OMEGA_START  = 10.497
+    OMEGA_END = 10.505
+    omegas = np.linspace(OMEGA_START,OMEGA_END,50) #balayage en fréquence
+    states = [[] for k in range(start,end)]         
     for omega in omegas:
         print("Current omega : "+str(omega))
         cpsf = CPSF(e_sum,e_diff,e_mag,theta,mag_asym, omega)
         cpsf.diagonalize()
         for e in range(start,end):
             states[e-start].append(cpsf.energies[e])  
-
+            if np.abs(cpsf.energies[e] - 220.5)<5:
+                print("Debug : state n°"+str(e)+"@"+str(round(cpsf.energies[e], 4))+" GHz; nL/nR : "+str(round(qt.expect(nL, cpsf.states[e]),4))+" "+str(round(qt.expect(nR, cpsf.states[e]),4))+" photons : "+
+                    str(round(qt.expect(nPhL,cpsf.states[e]),4))+" , s_tot : "+str(round(qt.expect(S_tot, cpsf.states[e]),4))+ ", sz "+str(round(qt.expect(S_Z,cpsf.states[e]),4)))
     fig, ax = plt.subplots()
     ax.set_xlabel('omega')
     for e in range(start,end):
