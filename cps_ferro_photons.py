@@ -117,12 +117,11 @@ class CPSF:
         mag_asym creates asymmetry between zeeman left and right
         theta is the ferro polarization angle
         '''
-        gl=0.05
-        gr=0.05
+        gl=0.5
+        gr=0.5
         omega0L = omega   
-        omega0R = 10*omega
-        Hcavite = gl*nL*(aLeft+aLeft.dag()) + gr*nR*(aRight+aRight.dag())
-        Hphoton = omega0L*(aLeft.dag()*aLeft)+omega0R*(aRight.dag()*aRight)
+        Hcavite = gl*nL*(aLeft+aLeft.dag()) 
+        Hphoton = omega0L*(aLeft.dag()*aLeft)
 
         Hchem = e_LUp*(LUpK.dag()*LUpK + LUpKp.dag()*LUpKp) +\
                 e_LDo*(LDoK.dag()*LDoK + LDoKp.dag()*LDoKp) + \
@@ -163,11 +162,6 @@ class CPSF:
         #if not hasattr(self,'energies'): #avoid diagonalizing mutlitple times
         Hamiltonian = self.H
         [nrj, st] = Hamiltonian.eigenstates()
-
-        for ii,e in enumerate(st):
-            u = e.norm()
-            nrj[ii] /=u
-            e = e/u
         self.energies = nrj
         self.states = st
            
@@ -472,11 +466,11 @@ def info_st(s,nrj):
 
 U = 250
 Um = 20
-teh =0.1
-tee = 0.1
+teh =0.2
+tee = 0.2
 DeltaKKp = 0
-e_sum = 50
-e_mag, theta, mag_asym = -5, np.pi/2, 0.05
+e_sum = 200
+e_mag, theta, mag_asym = -3.5, np.pi/2, 0.05
 omega0 =  -2*e_mag*(1+mag_asym) #-2bl
 t_lim = np.pi/(4*np.sqrt(2)*teh)
 
@@ -494,17 +488,12 @@ Pdown = down*down.dag()
 nl_t,nr_t,down_t, up_t, tot, photons,spins,sz,tt= [],[],[],[],[],[],[],[],[]
 #Etape 1 
 e_sum,e_diff = -Um,0 
-cpsf = CPSF(e_sum, e_diff, e_mag, theta, mag_asym,10.47)
-cpsf.diagonalize()
-for e in range(len(cpsf.states)):
-    if np.abs(qt.expect(S_tot,cpsf.states[e])) <10**-1:
-        print("Debug : state n°"+str(e)+"@"+str(round(cpsf.energies[e], 4))+" GHz; nL/nR : "+str(round(qt.expect(nL, cpsf.states[e]),4))+" "+str(round(qt.expect(nR, cpsf.states[e]),4))+" photons : "+
-            str(round(qt.expect(nPhL,cpsf.states[e]),4))+" , s_tot : "+str(round(qt.expect(S_tot, cpsf.states[e]),4))+ ", sz "+str(round(qt.expect(S_Z,cpsf.states[e]),4)))
 
+"""
 cpsf3 = CPSF(e_sum, e_diff, e_mag, theta, mag_asym,omega0)
 H = cpsf3.H
 times2 = np.linspace(0,t_lim, 1000)
-
+"""
 """
 result2 = qt.mesolve(H, psi0, times2, [], [])
 for i,t in enumerate(times2):
@@ -522,12 +511,19 @@ for i,t in enumerate(times2):
 #Etape 2
 
 e_sum,e_diff  = 200,(U-Um+2*e_mag)
+"""
+cpsf = CPSF(e_sum, e_diff, e_mag, theta, mag_asym,10.5)
+cpsf.diagonalize()
+for e in range(len(cpsf.states)):
+    if np.abs(qt.expect(S_tot,cpsf.states[e])) <10**-1:
+        print("Debug : state n°"+str(e)+"@"+str(round(cpsf.energies[e], 4))+" GHz; nL/nR : "+str(round(qt.expect(nL, cpsf.states[e]),4))+" "+str(round(qt.expect(nR, cpsf.states[e]),4))+" photons : "+
+            str(round(qt.expect(nPhL,cpsf.states[e]),4))+" , s_tot : "+str(round(qt.expect(S_tot, cpsf.states[e]),4))+ ", sz "+str(round(qt.expect(S_Z,cpsf.states[e]),4)))
 
-
-
-#cur_st = cpsf3.states[55]
-#print(info_st(cur_st, cpsf3.energies[55]))
-
+"""
+"""
+cur_st = cpsf3.states[60]
+print(info_st(cur_st, cpsf3.energies[60]))
+"""
 singlet = (LUpK.dag()*RDoKp.dag()-LDoKp.dag()*RUpK.dag())*vac+\
           (LUpKp.dag()*RDoK.dag()-LDoK.dag()*RUpKp.dag())*vac
 triplet = (LUpK.dag()*RDoKp.dag()+LDoKp.dag()*RUpK.dag())*vac+\
@@ -546,11 +542,12 @@ e_3 = (LDoK.dag()*RUpKp.dag())*vac
 #print(qt.expect(S_tot, e_1))
 #print(qt.expect(S_tot, e_3))
 
-times3 = np.linspace(0,  15, 3000)
+times3 = np.linspace(0,1, 200)
 if 1==1:
-    cpsf4 = CPSF(e_sum, e_diff, e_mag, theta, mag_asym,10.503)
-    result3 = qt.mesolve(cpsf4.H, singlet, times3, [], []) #part avec le dernier état du précédent mesolve
+    cpsf4 = CPSF(e_sum, e_diff, e_mag, theta, mag_asym,7.35)
+    result3 = qt.mesolve(cpsf4.H, triplet, times3, [np.sqrt(0.0001)*aLeft], []) #part avec le dernier état du précédent mesolve
     for i,t in enumerate(times3):
+        print(qt.expect(cpsf4.H, result3.states[i]))
         nl_t.append(qt.expect(nL, result3.states[i]))
         nr_t.append(qt.expect(nR,result3.states[i]))
         up_t.append(qt.expect(nUp, result3.states[i]))
@@ -576,27 +573,27 @@ if 1==1:
     ax.legend()
     plt.show() 
 
-trace(e_sum,e_diff,e_mag,theta,mag_asym, omega0)
-
+#trace(e_sum,e_diff,e_mag,theta,mag_asym, omega0)
+#theta = 0
 print("----- PARAMETRES -----")
 print("e_sigma : "+str(e_sum))
 print("e_diff : "+ str(e_diff))
 print("omega0 : "+str(omega0))
 print("---------------------")
 
-
-
 if 1==1: #Mode debug, plot de tous les états propres du Hamiltonien dans la plage d'énergie pertinente
-    start = 45
-    end  = 83
-    OMEGA_START  = 10.497
-    OMEGA_END = 10.505
+    start = 20
+    end  = 45
+    OMEGA_START  = 10.49
+    OMEGA_END = 10.52
     omegas = np.linspace(OMEGA_START,OMEGA_END,50) #balayage en fréquence
     states = [[] for k in range(start,end)]         
     for omega in omegas:
         print("Current omega : "+str(omega))
         cpsf = CPSF(e_sum,e_diff,e_mag,theta,mag_asym, omega)
         cpsf.diagonalize()
+        print("Energie singlet "+str(round(qt.expect(cpsf.H,singlet),4)))
+        print("Energie triplet "+str(round(qt.expect(cpsf.H,triplet),4)))
         for e in range(start,end):
             states[e-start].append(cpsf.energies[e])  
             if np.abs(cpsf.energies[e] - 220.5)<5:
@@ -605,11 +602,11 @@ if 1==1: #Mode debug, plot de tous les états propres du Hamiltonien dans la pla
     fig, ax = plt.subplots()
     ax.set_xlabel('omega')
     for e in range(start,end):
-        ax.scatter(omegas, states[e-start],label=str(e))
+        ax.plot(omegas, states[e-start],label=str(e))
     ax.legend()
     plt.show()  
 
-if 1==1: #Si on connaît déjà les deux états voulus
+if 1==0: #Si on connaît déjà les deux états voulus
     st_1 = (LUpK.dag()*RDoKp.dag()-LDoKp.dag()*RUpK.dag()+LUpKp.dag()*RDoK.dag()-LDoK.dag()*RUpKp.dag())*vac
     st_1 = st_1/st_1.norm()
     st_2 = ((LDoK.dag()*RDoKp.dag()*aLeft.dag())+(LDoKp.dag()*RDoK.dag()*aLeft.dag()))*vac
