@@ -67,7 +67,7 @@ class TestCavite:
         e_LUp = e_mag
         e_LDo = -e_mag
 
-        gl=0.05
+        gl=0.5
 
         nL = LUp.dag()*LUp+LDo.dag()*LDo
         omega0L = omega  
@@ -100,15 +100,15 @@ we set them to constant values
 '''
 #Parameters
 
-tee = 1
-e_mag, theta  = -3.5, np.pi/2
+tee = 4
+e_mag, theta  = -0.5, np.pi/2
 omega0 =  2*e_mag #-2bl
 
 nl_t,nr_t,down_t, up_t, tot, photons,tt= [],[],[],[],[],[],[]
 cpsf3 = TestCavite(e_mag, theta,omega0)
 H = cpsf3.H
-times2 = np.linspace(0,2, 1000)
-result2 = qt.mesolve(H, LDo.dag()*vac, times2, [], [])
+times2 = np.linspace(0,5, 1000)
+result2 = qt.mesolve(H, LDo.dag()*vac, times2, [np.sqrt(0.1)*aLeft], [])
 for i,t in enumerate(times2):
     nl_t.append(qt.expect(LUp.dag()*LUp, result2.states[i]))
     nr_t.append(qt.expect(LDo.dag()*LDo,result2.states[i]))
