@@ -67,7 +67,7 @@ class TestCavite:
         e_LUp = e_mag
         e_LDo = -e_mag
 
-        gl=0.5
+        gl=0.05
 
         nL = LUp.dag()*LUp+LDo.dag()*LDo
         omega0L = omega  

@@ -470,7 +470,7 @@ teh =0.2
 tee = 0.2
 DeltaKKp = 0
 e_sum = 200
-e_mag, theta, mag_asym = -3.5, np.pi/2, 0.05
+e_mag, theta, mag_asym = -0.5, np.pi/2, 0.05
 omega0 =  -2*e_mag*(1+mag_asym) #-2bl
 t_lim = np.pi/(4*np.sqrt(2)*teh)
 
@@ -542,10 +542,10 @@ e_3 = (LDoK.dag()*RUpKp.dag())*vac
 #print(qt.expect(S_tot, e_1))
 #print(qt.expect(S_tot, e_3))
 
-times3 = np.linspace(0,1, 200)
+times3 = np.linspace(0,10, 200)
 if 1==1:
-    cpsf4 = CPSF(e_sum, e_diff, e_mag, theta, mag_asym,7.35)
-    result3 = qt.mesolve(cpsf4.H, triplet, times3, [np.sqrt(0.0001)*aLeft], []) #part avec le dernier état du précédent mesolve
+    cpsf4 = CPSF(e_sum, e_diff, e_mag, theta, mag_asym,omega0)
+    result3 = qt.mesolve(cpsf4.H, triplet, times3, [], []) #part avec le dernier état du précédent mesolve
     for i,t in enumerate(times3):
         print(qt.expect(cpsf4.H, result3.states[i]))
         nl_t.append(qt.expect(nL, result3.states[i]))
