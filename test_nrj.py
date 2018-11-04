@@ -2,7 +2,7 @@ import numpy as np
 import qutip as qt
 import numpy as np
 from numpy import linalg as LA
-
+from scipy import stats
 import matplotlib.pyplot as plt
 sm = qt.sigmam()
 sz = qt.sigmaz()
@@ -178,14 +178,15 @@ def proj(H0, p_states, np_states):
     print(mat2)
 
     """
-    mat4 = np.zeros((N,N))
-    mat5 = np.zeros((N,N))
+    mat4 = np.zeros((N,N),dtype=np.complex_)
+    mat5 = np.zeros((N,N),dtype=np.complex_)
     for i in range(len(p_states)):
         for j in range(len(p_states)):
-            mat4[i,j] = np.real(np.round(p_states[i].overlap(nL*p_states[j]),7))
-            mat5[i,j] = np.real(np.round(p_states[i].overlap(nR*p_states[j]),7))
-    print(mat4)
-    print(mat5)
+            mat4[i,j] = p_states[i].overlap(nL*p_states[j])
+            mat5[i,j] = p_states[i].overlap(nR*p_states[j])
+    print((mat4[0,3]-mat4[1,3])*np.sqrt(2))
+    #print(mat5)
+    return np.abs(mat4[0,3]-mat4[1,3])*np.sqrt(2)
 
 def evaluate(e_sum, e_delta,e_mag, e_asym):
     H,H_i,H_no = Hamiltonian(e_sum, e_delta, e_mag, e_asym)
@@ -217,41 +218,57 @@ def evaluate(e_sum, e_delta,e_mag, e_asym):
         real_states.append(states[iMaxi])
         i_s.append(iMaxi)
         positions.append((pos+delta*j, nrj))
-        ax.scatter(pos+delta*j, nrj,marker='_', color='b', linewidths='10')
-        ax.text(pos+delta*j, nrj,etats_txt[j],fontsize='14')
+        #ax.scatter(pos+delta*j, nrj,marker='_', color='b', linewidths='10')
+        #ax.text(pos+delta*j, nrj,etats_txt[j],fontsize='14')
     #Calcul des ep perturbés 
     [nrjs, states2] = H.eigenstates()
     r_i_states = []
     print("--------------------")
-    for j in range(len(etats)):
+    for j in range(len(real_states)):
         maxi = 0
         iMaxi = 0
         for i in range(len(states2)):
-            if np.abs(etats[j].overlap(states2[i]))>maxi: #Calcul de <phi|phi_perturbe>
-                maxi = np.abs(etats[j].overlap(states2[i]))
+            if np.abs(real_states[j].overlap(states2[i]))>maxi: #Calcul de <phi|phi_perturbe>
+                maxi = np.abs(real_states[j].overlap(states2[i]))
                 iMaxi = i
         print(str(iMaxi)+" overlap : "+str(maxi)+" @"+str(np.round(nrjs[iMaxi],4))+" "+str(qt.expect(nL, states2[iMaxi]))+" "+str(qt.expect(nR,states2[iMaxi])))
         r_i_states.append(states2[iMaxi])
         
-    proj(H, r_i_states,etats)
+    g_eff = proj(H, r_i_states,etats)
    
     #affichage des couplages graphique
+    """
     for i,st in enumerate(etats):
         for j,st2 in enumerate(etats):
             if i!=j:
                 ax.plot([positions[i][0],positions[j][0]],[positions[i][1],positions[j][1]],linewidth=10*np.abs(st.overlap(H_i*st2)))
-
+    """
+    return g_eff
 U = 250
 Um = 0
 DeltaKKp = 500
-tee = 1
+tee = 0.1
 teh = 0.1
 theta = np.pi/2
-fig, ax = plt.subplots()
+#fig, ax = plt.subplots()
 e_sum = 1000
+X = np.linspace(0.05,1,20)
+X_ = [x**2 for x in X]
+Y = []
+
 for i in range(0,1):
-    e_delta = 0 #ou -U ou +U
-    evaluate(e_sum, e_delta, 5,0.3)
-    ax.set_title("e_sigma:  "+str(e_sum)+" e_delta : "+str(e_delta))
-    plt.pause(0.1) # pause avec duree en secondes
+    for x in X:
+        tee = x
+        e_delta = -U #ou -U ou +U
+        Y.append(evaluate(e_sum, e_delta, 5,0.6))
+        #ax.set_title("e_sigma:  "+str(e_sum)+" e_delta : "+str(e_delta))
+        #plt.pause(0.1) # pause avec duree en secondes
+axes = plt.axes()
+axes.grid()
+axes.set_xlabel('t_ee^2')
+axes.set_ylabel('Couplage')
+axes.set_title("Params : b_L+b_R = 10")
+slope2,intercept2,_,_,_ = stats.linregress(X_,Y)
+axes.scatter(X_,Y)
+#0axes.plot(X_,[slope2*x+intercept2 for x in X_])
 plt.show()
