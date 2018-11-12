@@ -114,8 +114,7 @@ def Hamiltonian(e_sum, e_delta, e_mag, e_asym):
                            LUpKp.dag()*LUpKp-LDoKp.dag()*LDoKp-\
                            RUpKp.dag()*RUpKp-RDoKp.dag()*RDoKp)
 
-        Hteh = teh*np.cos(theta/2)*(LUpKp.dag()*RDoKp.dag() - LDoKp.dag()*RUpK.dag())+\
-               teh*np.sin(theta/2)*(LUpKp.dag()*RUpK.dag() + LDoKp.dag()*RDoKp.dag())
+        Hteh = teh*np.cos(theta/2)*(LUpKp.dag()*RDoKp.dag()-LDoKp.dag()*RUpK.dag())
         Hteh += Hteh.dag()
         
         Htee = tee*np.cos(theta/2)*(LUpKp.dag()*RUpKp + LDoKp.dag()*RDoKp)+\
@@ -159,34 +158,22 @@ def proj(H0, p_states, np_states):
     for i,b1 in enumerate(np_states):
         for j, b2 in enumerate(np_states):
             mat[i,j] =np.abs(b1.overlap(H0*b2))
-    """
-    passage = np.zeros((6,6))
-    for i,b1 in enumerate(p_states):
-        for j, b2 in enumerate(np_states):
-            passage[i,j] = (b2.dag()*b1)[0][0][0]
 
-    tot = 0 
-    print(np.round(passage,5))
-    print()
-    mat2 = np.zeros((N,N))
-    for i in range(len(np_states)):
-        for j in range(len(np_states)):
-            for k,s in enumerate(p_states):
-                for l,s2 in enumerate(p_states):
-                    mat2[i,j] += passage[k,i]*passage[l,j]
-            mat2[i,j] = np.round(mat2[i,j],6)
-    print(mat2)
+    mat4 = np.zeros((N,N))
+    mat5 = np.zeros((N,N))
+    print(p_states[2].overlap(etats[2]))
+    sgn = [np.sign(np.real(p_states[i].overlap(etats[i]))) for i in range(4)]
 
-    """
-    mat4 = np.zeros((N,N),dtype=np.complex_)
-    mat5 = np.zeros((N,N),dtype=np.complex_)
+
     for i in range(len(p_states)):
         for j in range(len(p_states)):
-            mat4[i,j] = p_states[i].overlap(nL*p_states[j])
-            mat5[i,j] = p_states[i].overlap(nR*p_states[j])
+            mat4[i,j] = np.real(sgn[i]*p_states[i].overlap(nL*sgn[j]*p_states[j]))
+            mat5[i,j] = np.real(sgn[i]*p_states[i].overlap(nR*sgn[j]*p_states[j]))
+
+    print(mat4)
     print((mat4[0,3]-mat4[1,3])*np.sqrt(2))
     #print(mat5)
-    return np.abs(mat4[0,3]-mat4[1,3])*np.sqrt(2)
+    return (mat4[0,3]-mat4[1,3])*np.sqrt(2)
 
 def evaluate(e_sum, e_delta,e_mag, e_asym):
     H,H_i,H_no = Hamiltonian(e_sum, e_delta, e_mag, e_asym)
@@ -201,7 +188,6 @@ def evaluate(e_sum, e_delta,e_mag, e_asym):
         maxi = 0
         iMaxi = 0
         for i in range(len(states)):
-            nrj = qt.expect(H, states[i])
             if np.abs(etats[j].overlap(states[i]))>maxi:
                 maxi = np.abs(etats[j].overlap(states[i]))
                 iMaxi = i
@@ -252,23 +238,24 @@ teh = 0.1
 theta = np.pi/2
 #fig, ax = plt.subplots()
 e_sum = 1000
-X = np.linspace(0.05,1,20)
-X_ = [x**2 for x in X]
+X = np.linspace(0.05,4.7,10)
+X_ = [x for x in X]
 Y = []
 
 for i in range(0,1):
     for x in X:
-        tee = x
         e_delta = -U #ou -U ou +U
-        Y.append(evaluate(e_sum, e_delta, 5,0.6))
+        Y.append(evaluate(e_sum, e_delta, 2.55,0.8))
         #ax.set_title("e_sigma:  "+str(e_sum)+" e_delta : "+str(e_delta))
-        #plt.pause(0.1) # pause avec duree en secondes
+        #plt.pause(0.1) # pause avec duree en secondes 
 axes = plt.axes()
 axes.grid()
 axes.set_xlabel('t_ee^2')
 axes.set_ylabel('Couplage')
 axes.set_title("Params : b_L+b_R = 10")
 slope2,intercept2,_,_,_ = stats.linregress(X_,Y)
+print(slope2)
+print(Y)
 axes.scatter(X_,Y)
-#0axes.plot(X_,[slope2*x+intercept2 for x in X_])
+#axes.plot(X_,[slope2*x+intercept2 for x in X_])
 plt.show()
