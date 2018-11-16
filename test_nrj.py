@@ -139,14 +139,16 @@ def proj(H0, p_states, np_states):
     N = len(p_states)
     J = np.zeros((6,6))
     base = [singlet, triplet, s_r, s_l,triplet_p, triplet_m]
+    """
     for i in range(6):
         for j in range(6):
             J[i,j] = np.real(base[i].overlap(H0*base[j]))
     passage = np.array([[1/np.sqrt(3),1/np.sqrt(3), 1/np.sqrt(3), 0,0,0],[1/np.sqrt(3), -1/np.sqrt(3), 1/np.sqrt(3),0,0,0], [1/np.sqrt(3),-1/np.sqrt(3), -1/np.sqrt(3),0,0,0],[0,0,0,1,0,0], [0,0,0,0,1,0],[0,0,0,0,0,1]])
     transfo = np.linalg.inv(passage)*J*passage   
-    print(np.round(J,4))
+    #print(np.round(J,4))
     print(np.linalg.inv(passage))
     print(np.round(transfo,7))
+    """
     mat4 = np.zeros((N,N))
     mat5 = np.zeros((N,N))
     sgn = [np.sign(np.real(p_states[i].overlap(etats[i]))) for i in range(4)]
@@ -159,7 +161,7 @@ def proj(H0, p_states, np_states):
     #Changement de base de la matrice mat4 vers la base {S,T,Sr,Sl,T+,T-}
     passage2 = np.array([[1,1,0,0],[-1, 1,0,0],[0,0,1,0],[0,0,0,1]])
     mat6 =np.linalg.inv(passage2)*mat4*passage2
-    print(mat6)
+    #print(mat6)
     print("Checking singlet like")
     print((mat5[0,3]-mat5[1,3])*np.sqrt(2))
     print((mat4[0,3]-mat4[1,3])*np.sqrt(2))
@@ -227,25 +229,32 @@ theta = np.pi/4
 e_sum = 1000
 
 Y = []
-b_l = 3.5
-b_r = 2.5
-es = np.linspace(-U,U, 10)
+b_l = 3.6
+b_r = 2.4
+es = np.linspace(-U,U, 100)
 y = []
 y2 = []
 Yth = []
+g = 0.2
+emag=3
+magasym=0.2
+
+assert(b_l==np.round(emag*(1+magasym),2))
+assert(b_r==np.round(emag*(1-magasym),2))
+
 for e_delta in es:
     A = 1/((b_r-b_l)-(U+e_delta))*1/(-(b_l+b_r)-(U+e_delta))
     B = -1/((b_l-b_r)-(U+e_delta))*1/(-(b_l+b_r)-(U+e_delta))
     A2 = 1/((b_r-b_l)-(U-e_delta))*1/(-(b_l+b_r)-(U-e_delta))
     B2 = -1/((b_l-b_r)-(U-e_delta))*1/(-(b_l+b_r)-(U-e_delta))
     y.append(tee**2*np.sin(theta)/np.sqrt(2)*(A-B))
-    y2.append(tee**2*np.sin(theta)/np.sqrt(2)*(A2-B2))
-    Yth.append(evaluate(e_sum, e_delta, 5,0.1))
+    y2.append(tee**2*np.sin(theta)/np.sqrt(2)*(A2-B2)/g)
+    Yth.append(evaluate(e_sum, e_delta, emag,magasym)/g)
+
 es /=U
 #plt.plot(es, y,label="alpha_L")
-g = 0.2
-plt.plot(es, y2/g,label="alpha_R")
-plt.scatter(es,Yth/g, label="alpha théorique")
+plt.plot(es, y2,label="alpha_R")
+plt.scatter(es,Yth, label="alpha théorique")
 plt.xlabel("e_delta/U")
 plt.ylabel("g_eff (GHz)")
 plt.title("Coupling dependance in epsilon_Delta")
