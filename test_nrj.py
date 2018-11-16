@@ -161,11 +161,9 @@ def proj(H0, p_states, np_states):
     mat6 =np.linalg.inv(passage2)*mat4*passage2
     print(mat6)
     print("Checking singlet like")
-    print(singlet.overlap(1/np.sqrt(2)*(sgn[0]*p_states[0]-sgn[1]*p_states[1])))
-    print(triplet_p.overlap(sgn[3]*p_states[3]))
-    print((mat5[0,3]-mat5[1,3])*1/np.sqrt(2))
-    print((mat4[0,3]-mat4[1,3])*1/np.sqrt(2))
-    return (mat5[0,3]-mat5[1,3])*1/np.sqrt(2) #mat4 = Left /mat5 = R
+    print((mat5[0,3]-mat5[1,3])*np.sqrt(2))
+    print((mat4[0,3]-mat4[1,3])*np.sqrt(2))
+    return (mat5[0,3]-mat5[1,3])*np.sqrt(2) #mat4 = Left /mat5 = R
 
 def evaluate(e_sum, e_delta,e_mag, e_asym):
     H,H_i,H_no = Hamiltonian(e_sum, e_delta, e_mag, e_asym)
@@ -218,33 +216,21 @@ def evaluate(e_sum, e_delta,e_mag, e_asym):
         
     g_eff = proj(H, r_i_states,etats)
 
-   
-    #affichage des couplages graphique
-    """
-    for i,st in enumerate(etats):
-        for j,st2 in enumerate(etats):
-            if i!=j:
-                ax.plot([positions[i][0],positions[j][0]],[positions[i][1],positions[j][1]],linewidth=10*np.abs(st.overlap(H_i*st2)))
-    """
-
     return g_eff
 U = 250
 Um = 0
 DeltaKKp = 500
-tee = 0.1
+tee = 5
 teh = 0
 theta = np.pi/4
 #fig, ax = plt.subplots()
 e_sum = 1000
-X = np.linspace(2,5,10)
-X_ = [1/4*(x*0.2)**2 for x in X]
 
 Y = []
-b_l = 5.5
-b_r = 4.5
-es = np.linspace(U-3,U,20)
+b_l = 3.5
+b_r = 2.5
+es = np.linspace(-U,U, 10)
 y = []
-
 y2 = []
 Yth = []
 for e_delta in es:
@@ -256,36 +242,13 @@ for e_delta in es:
     y2.append(tee**2*np.sin(theta)/np.sqrt(2)*(A2-B2))
     Yth.append(evaluate(e_sum, e_delta, 5,0.1))
 es /=U
-plt.plot(es, y,label="alpha_L")
-#plt.plot(es, y2,label="alpha_R")
-plt.scatter(es,Yth, label="alpha théorique")
+#plt.plot(es, y,label="alpha_L")
+g = 0.2
+plt.plot(es, y2/g,label="alpha_R")
+plt.scatter(es,Yth/g, label="alpha théorique")
 plt.xlabel("e_delta/U")
+plt.ylabel("g_eff (GHz)")
 plt.title("Coupling dependance in epsilon_Delta")
 plt.legend()
-plt.show()
-
-print(evaluate(e_sum, U-5, 2.5, 0.2))
-
-print("Beginning...")
-for i in range(0,1):
-    for x in X:
-        e_delta = U #ou -U ou +U
-        #print(tee)
-        #tee = x
-        Y.append(evaluate(e_sum, e_delta, x,0.2))
-axes = plt.axes()
-axes.grid()
-axes.set_xlabel('t_ee^2')
-axes.set_ylabel('Coupling intensity')
-axes.set_title("Coupling intensity")
-slope2,intercept2,_,_,_ = stats.linregress(X_,Y)
-print(stats.linregress(X_,Y))
-print(Y)
-axes.scatter(X_,Y, label="Parameters\n\nb_L+b_R= 5\ne_s = 1000\ne_d=U\ntheta=pi/2")
-#axes.plot(X_,[slope2*x+intercept2 for x in X_])
-chartBox = axes.get_position()
-axes.set_position([chartBox.x0, chartBox.y0, chartBox.width*0.9, chartBox.height])
-axes.legend(loc='upper center', bbox_to_anchor=(1.65, 0.9), shadow=True, ncol=1)
-axes.legend()
 plt.show()
 
