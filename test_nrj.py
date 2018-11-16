@@ -67,26 +67,22 @@ nDo = LDoK.dag()*LDoK +LDoKp.dag()*LDoKp+ RDoK.dag()*RDoK + RDoKp.dag()*RDoKp
 nPhoton = aLeft.dag()*aLeft+aRight.dag()*aRight
 
 #Définition d'états
-s_r = (-RUpKp.dag()*RDoKp.dag()+LUpKp.dag()*LDoKp.dag())*vac
+s_r = (RUpKp.dag()*RDoKp.dag())*vac
 s_r /= s_r.norm()
-s_l = (RUpKp.dag()*RDoKp.dag()+LUpKp.dag()*LDoKp.dag())*vac
+s_l = (LUpKp.dag()*LDoKp.dag())*vac
 s_l /= s_l.norm()
 singlet = (LUpKp.dag()*RDoKp.dag()-LDoKp.dag()*RUpKp.dag())*vac
 singlet /= singlet.norm()
 triplet = (LUpKp.dag()*RDoKp.dag()+LDoKp.dag()*RUpKp.dag())*vac
 triplet /= triplet.norm()
-singlet_1 = triplet + RUpKp.dag()*RDoKp.dag()*vac
-singlet_1 /= singlet_1.norm()
-singlet_2 =    triplet - RUpKp.dag()*RDoKp.dag()*vac
-singlet_2 /= singlet_2.norm()
-singlet_3 = (singlet+s_r)
-singlet_3 /= singlet_3.norm()
-singlet_4 = (singlet-s_r)
-singlet_4 /= singlet_4.norm()
 triplet_p = LUpKp.dag()*RUpKp.dag()*vac
 triplet_m = LDoKp.dag()*RDoKp.dag()*vac
 
 #Etats d'intérêt
+st_1 = singlet+triplet+s_r
+st_2 = singlet+s_r-triplet
+st_3 = singlet-s_r+triplet
+
 etats = [LUpKp.dag()*RDoKp.dag()*vac, LDoKp.dag()*RUpKp.dag()*vac, triplet_m, triplet_p]
 
 etats_txt = [r'$\uparrow_{K^p}$'+","r'$\downarrow_{K^p}$', r'$\downarrow_{K^p}$'+","r'$\uparrow_{K^p}$',r'$\uparrow_{K^p}$'+","r'$\uparrow_{K^p}$',
@@ -95,6 +91,12 @@ r'$\downarrow_{K^p}$'+","r'$\downarrow_{K^p}$',r'$\uparrow_{K^p}\downarrow_{K^p}
 
 
 def Hamiltonian(e_sum, e_delta, e_mag, e_asym):
+        print("------")
+        print(e_sum)
+        print(e_delta)
+        print(e_mag*(1+e_asym))
+        print(e_mag*(1-e_asym))
+        print("------")
         omega0L = 2*e_mag*(1+e_asym)
         omega0R = 2*e_mag*(1-e_asym)
         e_LUp = (e_sum+e_delta)/2 - e_mag*(1+e_asym)
@@ -102,6 +104,7 @@ def Hamiltonian(e_sum, e_delta, e_mag, e_asym):
         e_RUp = (e_sum-e_delta)/2 - e_mag*(1-e_asym)
         e_RDo = (e_sum-e_delta)/2 + e_mag*(1-e_asym)    
         print(omega0L)
+        print(omega0R)
         Hchem = e_LUp*(LUpK.dag()*LUpK + LUpKp.dag()*LUpKp) +\
                 e_LDo*(LDoK.dag()*LDoK + LDoKp.dag()*LDoKp) + \
                 e_RUp*(RUpK.dag()*RUpK + RUpKp.dag()*RUpKp) + \
@@ -117,7 +120,7 @@ def Hamiltonian(e_sum, e_delta, e_mag, e_asym):
         Hteh = teh*np.cos(theta/2)*(LUpKp.dag()*RDoKp.dag()-LDoKp.dag()*RUpK.dag())
         Hteh += Hteh.dag()
         
-        Htee = tee*np.cos(theta/2)*(LUpKp.dag()*RUpKp + LDoKp.dag()*RDoKp)+\
+        Htee = tee*np.cos(theta/2)*(LUpKp.dag()*RUpKp + LDoKp.dag()*RDoKp) +\
                tee*np.sin(theta/2)*(-LUpKp.dag()*RDoKp + LDoKp.dag()*RUpKp)
         Htee += Htee.dag()
         g = 0
@@ -128,55 +131,49 @@ def Hamiltonian(e_sum, e_delta, e_mag, e_asym):
         H = Hchem + Hint + HKKp+Htee+Hteh+Hcavite+Hphoton
         H_p = Hchem + Hint +HKKp+Hphoton
         H_i = Htee + Hteh + Hcavite
+        
+
+
         return H,H_i,H_p
 def proj(H0, p_states, np_states):
-    """
-    S = real_states[0]-real_states[1]
-    S /= S.norm()
-    T0 = real_states[0]+real_states[1]
-    T0 /= T0.norm()
-    Tp = real_states[2]
-    Tp /= Tp.norm()
-    Tm = real_states[3]
-    V0 = real_states[4]
-    V1 = real_states[5]
-
-    basis = [S, T0, V0, V1,Tp, Tm]
-    """
-    """
-    a = p_states[0]
-    b = p_states[1]
-    p_states[0] = (a-b)/np.sqrt(2)
-    p_states[1] = (a+b)/np.sqrt(2)
-    a = np_states[0]
-    b = np_states[1]
-    np_states[0] = (a-b)/np.sqrt(2)
-    np_states[1] = (a+b)/np.sqrt(2)
-    """ 
-    N = len(np_states)
-    mat = np.zeros((N,N))
-    for i,b1 in enumerate(np_states):
-        for j, b2 in enumerate(np_states):
-            mat[i,j] =np.abs(b1.overlap(H0*b2))
-
+    N = len(p_states)
+    J = np.zeros((6,6))
+    base = [singlet, triplet, s_r, s_l,triplet_p, triplet_m]
+    for i in range(6):
+        for j in range(6):
+            J[i,j] = np.real(base[i].overlap(H0*base[j]))
+    passage = np.array([[1/np.sqrt(3),1/np.sqrt(3), 1/np.sqrt(3), 0,0,0],[1/np.sqrt(3), -1/np.sqrt(3), 1/np.sqrt(3),0,0,0], [1/np.sqrt(3),-1/np.sqrt(3), -1/np.sqrt(3),0,0,0],[0,0,0,1,0,0], [0,0,0,0,1,0],[0,0,0,0,0,1]])
+    transfo = np.linalg.inv(passage)*J*passage   
+    print(np.round(J,4))
+    print(np.linalg.inv(passage))
+    print(np.round(transfo,7))
     mat4 = np.zeros((N,N))
     mat5 = np.zeros((N,N))
-    print(p_states[2].overlap(etats[2]))
     sgn = [np.sign(np.real(p_states[i].overlap(etats[i]))) for i in range(4)]
-
 
     for i in range(len(p_states)):
         for j in range(len(p_states)):
             mat4[i,j] = np.real(sgn[i]*p_states[i].overlap(nL*sgn[j]*p_states[j]))
             mat5[i,j] = np.real(sgn[i]*p_states[i].overlap(nR*sgn[j]*p_states[j]))
 
-    print(mat4)
-    print((mat4[0,3]-mat4[1,3])*np.sqrt(2))
-    #print(mat5)
-    return (mat4[0,3]-mat4[1,3])*np.sqrt(2)
+    #Changement de base de la matrice mat4 vers la base {S,T,Sr,Sl,T+,T-}
+    passage2 = np.array([[1,1,0,0],[-1, 1,0,0],[0,0,1,0],[0,0,0,1]])
+    mat6 =np.linalg.inv(passage2)*mat4*passage2
+    print(mat6)
+    print("Checking singlet like")
+    print(singlet.overlap(1/np.sqrt(2)*(sgn[0]*p_states[0]-sgn[1]*p_states[1])))
+    print(triplet_p.overlap(sgn[3]*p_states[3]))
+    print((mat5[0,3]-mat5[1,3])*1/np.sqrt(2))
+    print((mat4[0,3]-mat4[1,3])*1/np.sqrt(2))
+    return (mat5[0,3]-mat5[1,3])*1/np.sqrt(2) #mat4 = Left /mat5 = R
 
 def evaluate(e_sum, e_delta,e_mag, e_asym):
     H,H_i,H_no = Hamiltonian(e_sum, e_delta, e_mag, e_asym)
+    for l in range(len(etats)):
+        for m in range(len(etats)):
+            print(np.round(np.real(etats[l].overlap(H*etats[m])),5), end = " ")
+        print()
+
     #Calcul des ep non perturbés
     [nrjs, states] = H_no.eigenstates()
     LEFT, CENTER, RIGHT = -10,0, 10
@@ -186,7 +183,6 @@ def evaluate(e_sum, e_delta,e_mag, e_asym):
     i_s = []
     for j in range(len(etats)):
         maxi = 0
-        iMaxi = 0
         for i in range(len(states)):
             if np.abs(etats[j].overlap(states[i]))>maxi:
                 maxi = np.abs(etats[j].overlap(states[i]))
@@ -221,6 +217,7 @@ def evaluate(e_sum, e_delta,e_mag, e_asym):
         r_i_states.append(states2[iMaxi])
         
     g_eff = proj(H, r_i_states,etats)
+
    
     #affichage des couplages graphique
     """
@@ -229,33 +226,66 @@ def evaluate(e_sum, e_delta,e_mag, e_asym):
             if i!=j:
                 ax.plot([positions[i][0],positions[j][0]],[positions[i][1],positions[j][1]],linewidth=10*np.abs(st.overlap(H_i*st2)))
     """
+
     return g_eff
 U = 250
 Um = 0
 DeltaKKp = 500
 tee = 0.1
-teh = 0.1
-theta = np.pi/2
+teh = 0
+theta = np.pi/4
 #fig, ax = plt.subplots()
 e_sum = 1000
-X = np.linspace(0.05,4.7,10)
-X_ = [x for x in X]
-Y = []
+X = np.linspace(2,5,10)
+X_ = [1/4*(x*0.2)**2 for x in X]
 
+Y = []
+b_l = 5.5
+b_r = 4.5
+es = np.linspace(U-3,U,20)
+y = []
+
+y2 = []
+Yth = []
+for e_delta in es:
+    A = 1/((b_r-b_l)-(U+e_delta))*1/(-(b_l+b_r)-(U+e_delta))
+    B = -1/((b_l-b_r)-(U+e_delta))*1/(-(b_l+b_r)-(U+e_delta))
+    A2 = 1/((b_r-b_l)-(U-e_delta))*1/(-(b_l+b_r)-(U-e_delta))
+    B2 = -1/((b_l-b_r)-(U-e_delta))*1/(-(b_l+b_r)-(U-e_delta))
+    y.append(tee**2*np.sin(theta)/np.sqrt(2)*(A-B))
+    y2.append(tee**2*np.sin(theta)/np.sqrt(2)*(A2-B2))
+    Yth.append(evaluate(e_sum, e_delta, 5,0.1))
+es /=U
+plt.plot(es, y,label="alpha_L")
+#plt.plot(es, y2,label="alpha_R")
+plt.scatter(es,Yth, label="alpha théorique")
+plt.xlabel("e_delta/U")
+plt.title("Coupling dependance in epsilon_Delta")
+plt.legend()
+plt.show()
+
+print(evaluate(e_sum, U-5, 2.5, 0.2))
+
+print("Beginning...")
 for i in range(0,1):
     for x in X:
-        e_delta = -U #ou -U ou +U
-        Y.append(evaluate(e_sum, e_delta, 2.55,0.8))
-        #ax.set_title("e_sigma:  "+str(e_sum)+" e_delta : "+str(e_delta))
-        #plt.pause(0.1) # pause avec duree en secondes 
+        e_delta = U #ou -U ou +U
+        #print(tee)
+        #tee = x
+        Y.append(evaluate(e_sum, e_delta, x,0.2))
 axes = plt.axes()
 axes.grid()
 axes.set_xlabel('t_ee^2')
-axes.set_ylabel('Couplage')
-axes.set_title("Params : b_L+b_R = 10")
+axes.set_ylabel('Coupling intensity')
+axes.set_title("Coupling intensity")
 slope2,intercept2,_,_,_ = stats.linregress(X_,Y)
-print(slope2)
+print(stats.linregress(X_,Y))
 print(Y)
-axes.scatter(X_,Y)
+axes.scatter(X_,Y, label="Parameters\n\nb_L+b_R= 5\ne_s = 1000\ne_d=U\ntheta=pi/2")
 #axes.plot(X_,[slope2*x+intercept2 for x in X_])
+chartBox = axes.get_position()
+axes.set_position([chartBox.x0, chartBox.y0, chartBox.width*0.9, chartBox.height])
+axes.legend(loc='upper center', bbox_to_anchor=(1.65, 0.9), shadow=True, ncol=1)
+axes.legend()
 plt.show()
+
