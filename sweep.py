@@ -287,7 +287,7 @@ def evaluate(e_sum, e_delta, e_mag, e_asym):
                 iMaxi = i
 
         st = states[iMaxi]
-        print(str(iMaxi)+" overlap : "+str(maxi)+" @"+str(np.round(nrjs[iMaxi],4))+" "+str(qt.expect(nL, st))+" "+str(qt.expect(nR,st)))
+        #print(str(iMaxi)+" overlap : "+str(maxi)+" @"+str(np.round(nrjs[iMaxi],4))+" "+str(qt.expect(nL, st))+" "+str(qt.expect(nR,st)))
         if qt.expect(nL, st)>0.8 and qt.expect(nL, st)<1.2 and qt.expect(nR, st)>0.8 and qt.expect(nR,st)<1.2:
             pos = CENTER
         if qt.expect(nL, st)>1.2:
@@ -311,7 +311,7 @@ def evaluate(e_sum, e_delta, e_mag, e_asym):
             if np.abs(real_states[j].overlap(states2[i]))>maxi: #Calcul de <phi|phi_perturbe>
                 maxi = np.abs(real_states[j].overlap(states2[i]))
                 iMaxi = i
-        print(str(iMaxi)+" overlap : "+str(maxi)+" @"+str(np.round(nrjs2[iMaxi],4))+" "+str(qt.expect(nL, states2[iMaxi]))+" "+str(qt.expect(nR,states2[iMaxi])))
+        #print(str(iMaxi)+" overlap : "+str(maxi)+" @"+str(np.round(nrjs2[iMaxi],4))+" "+str(qt.expect(nL, states2[iMaxi]))+" "+str(qt.expect(nR,states2[iMaxi])))
         r_i_states.append(states2[iMaxi])
     
     #analyse(states2, nrjs)
@@ -330,15 +330,15 @@ e_sum = 1000
 b_l = 5.5
 b_r = 4.5
 
-epsilons = np.linspace(-U/2, U, 1)
+epsilons = np.linspace(-U/2, U, 2)
 maxis_L = []
 maxis_R = []
 alphas_L = []
 alphas_R = []
-
+g = 0.4
 for e_delta in epsilons:
     psi0 = singlet
-    times = np.linspace(0,500,6000)
+    times = np.linspace(0,200,2000)
     H,_,_ = Hamiltonian(e_sum, e_delta,5, 0.1, 0.4)
     observ = [nL, nR, aLeft.dag()*aLeft, aRight.dag()*aRight]
     result = qt.mesolve(H, psi0, times, [], observ)
@@ -346,20 +346,20 @@ for e_delta in epsilons:
     maxi_right = np.max(result.expect[3])
     maxis_L.append(maxi_left)
     maxis_R.append(maxi_right)
-    aR, aL = evaluate(e_sum, e_delta, 5,0.1)
+    aR, aL,_ = evaluate(e_sum, e_delta, 5,0.1)
     alphas_L.append(aL)
     alphas_R.append(aR)
 
 plt.close('all')
 fig, ax = plt.subplots(2,1)
 ax[0].set_title("Sweep e_delta")
-ax[0].plot(epsilons, maxis_L, label='left')
-ax[0].plot(epsilons, alpha_L, label='right')
+ax[0].plot(epsilons, maxis_L, label='maxi')
+ax[0].plot(epsilons, alphas_L, label='alpha_l')
 ax[0].set_xlabel("Time")
 ax[0].set_ylabel("<n>")
 ax[0].legend()
-ax[1].plot(epsilons, maxis_R, label="left")
-ax[1].plot(epsilons, alpha_R, label='right')
+ax[1].plot(epsilons, maxis_R, label="maxi")
+ax[1].plot(epsilons, alphas_R, label='alpha_r')
 ax[1].set_ylabel("<a^\daggera>")
 ax[1].set_xlabel("Time")
 ax[1].legend()
