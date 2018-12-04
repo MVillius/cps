@@ -46,7 +46,6 @@ aLeft = qt.tensor(aLeft, qt.destroy(3))
 aRight = qt.tensor(aRight, III)
 aLeft = qt.tensor(aLeft, III)
 aRight = qt.tensor(aRight, qt.destroy(3))
-
 II = I
 zero = qt.tensor(qt.fock(2,1)) 
 zero_photons = qt.tensor(qt.fock(3,0))
@@ -64,8 +63,12 @@ nR = RUpKp.dag()*RUpKp + RDoKp.dag()*RDoKp
 nUp = LUpKp.dag()*LUpKp + RUpKp.dag()*RUpKp
 nDo = LDoKp.dag()*LDoKp + RDoKp.dag()*RDoKp
 nPhoton = aLeft.dag()*aLeft+aRight.dag()*aRight
+def comm(A,B):
+    return A*B-B*A
+print(comm(LDoKp.dag()*RDoKp, nL)==-LDoKp.dag()*RDoKp)
+print(comm(LDoKp.dag()*RUpKp.dag(), nL)==-LDoKp.dag()*RUpKp.dag())
 
-#Définition d'états
+#Définition d'état
 s_r = (RUpKp.dag()*RDoKp.dag())*vac
 s_r /= s_r.norm()
 s_l = (LUpKp.dag()*LDoKp.dag())*vac
@@ -82,14 +85,104 @@ st_1 = singlet+triplet+s_r
 st_2 = singlet+s_r-triplet
 st_3 = singlet-s_r+triplet
 
-etats = [LUpKp.dag()*RDoKp.dag()*vac, LDoKp.dag()*RUpKp.dag()*vac, triplet_m, triplet_p]
+etats = [LUpKp.dag()*RDoKp.dag()*vac, LDoKp.dag()*RUpKp.dag()*vac, triplet_m, triplet_p] 
 
 etats_txt = [r'$\uparrow_{K^p}$'+","r'$\downarrow_{K^p}$', r'$\downarrow_{K^p}$'+","r'$\uparrow_{K^p}$',r'$\uparrow_{K^p}$'+","r'$\uparrow_{K^p}$',
 r'$\downarrow_{K^p}$'+","r'$\downarrow_{K^p}$',r'$\uparrow_{K^p}\downarrow_{K^p}$'+',o','o,'+r'$\uparrow_{K^p}\downarrow_{K^p}$']
 
+def label(ii, state):
+    pos = 0
+    label = '('+str(ii)+" "
+    nLUp = qt.expect(LUpKp.dag()*LUpKp, state)
+    nLDo = qt.expect(LDoKp.dag()*LDoKp, state)
+    check1 = False
+    if nLUp+nLDo<0.8:
+        label+='o'      
+        pos = 0
+    else:
+        if nLUp<1.8 and nLDo<0.8:
+            label+=r'$\uparrow$'
+            pos = -1
+        elif nLUp > 1.8 and nLDo<0.8:
+            label += r"$\uparrow\uparrow$"
+            pos = -2
+        elif nLDo<1.8 and nLUp<0.8:
+            label+=r'$\downarrow$'
+            check1 = True
+            pos = -1
+        elif nLDo > 1.8 and nLUp<0.8:
+            label += r"$\downarrow\downarrow$"
+            pos = -2
+        elif nLDo>0.8 and nLDo<1.6 and nLUp>0.8 and nLUp<1.6:
+            label += r"$\uparrow\downarrow$"
+            pos = -2
+    
+    label += ';'
+    
+    nRUp = qt.expect(RUpKp.dag()*RUpKp, state)
+    nRDo = qt.expect(RDoKp.dag()*RDoKp, state)
+    check2 = False
+    if nRUp+nRDo<0.8:
+        label+='o'
+        pos += 0
+    else:
+        if nRUp<1.8 and nRDo<0.8:
+            label+=r'$\uparrow$'
+            pos += 1
+        elif nRUp > 1.8 and nRDo<0.8:
+            label += r"$\uparrow\uparrow$"
+            pos += 2
+        elif nRDo<1.8 and nRUp<0.8:
+            label+=r'$\downarrow$'
+            pos += 1
+            check2 = True
 
+        elif nRDo > 1.8 and nRUp<0.8:
+            label += r"$\downarrow\downarrow$"
+            pos += 2
+        elif nRDo>0.8 and nRDo<1.6 and nRUp>0.8 and nRUp<1.6:
+            label += r"$\uparrow\downarrow$"
+            pos += 2
 
-def Hamiltonian(e_sum, e_delta, e_mag, e_asym, g=0.2):
+    label+="|"
+    nPL = qt.expect(aLeft.dag()*aLeft, state)
+    nPR = qt.expect(aRight.dag()*aRight, state)
+    if nPL+nPR<0.8:
+        label+='0;0'
+        pos += 0
+    else:
+        pos+=3
+        if nPL<1.8 and nPR<0.8:
+            label+=r'$1;0$'
+        elif nPL > 0.8 and nPR>0.8:
+            label += r"$1;1$"
+        elif nPL<0.8 and nPR<1.8:
+            label+=r'0;1'
+    label += ')'
+    return label, pos
+
+def analyse(states,energies):
+    fig, ax = plt.subplots()
+    for i,nrj in enumerate(energies):
+        red = False
+        left = qt.expect(nL, states[i])
+        right = qt.expect(nR, states[i])
+        photL = qt.expect(aLeft.dag()*aLeft, states[i])
+        photR = qt.expect(aRight.dag()*aRight, states[i])
+        if(left+right>2.2 or (left+right>0.5 and left+right<1.2)):
+            continue
+        if left+right<0.2 and photL+photR>0.2:
+            red = True 
+        st_label, pos =label(i,states[i])
+        if red:
+            ax.scatter(pos, nrj,marker='_', color='r', linewidths='10')
+        else:
+            ax.scatter(pos, nrj,marker='_', color='b', linewidths='10')
+        ax.text(pos, nrj,
+                        st_label,
+                        fontsize='14')
+    plt.show()
+def Hamiltonian(e_sum, e_delta, e_mag, e_asym, g=0.4):
         print("------")
         print(e_sum)
         print(e_delta)
@@ -123,18 +216,27 @@ def Hamiltonian(e_sum, e_delta, e_mag, e_asym, g=0.2):
         Htee = tee*np.cos(theta/2)*(LUpKp.dag()*RUpKp + LDoKp.dag()*RDoKp) +\
                tee*np.sin(theta/2)*(-LUpKp.dag()*RDoKp + LDoKp.dag()*RUpKp)
         Htee += Htee.dag()
-        
         Hcavite = g*nL*(aLeft+aLeft.dag()) + g*nR*(aRight+aRight.dag())
         Hphoton = omega0L*(aLeft.dag()*aLeft)+omega0R*(aRight.dag()*aRight)
-
-
+        print(nL*(LUpKp.dag()*RDoKp.dag()-LDoKp.dag()*RUpKp.dag()).dag()*(LUpKp.dag()*RUpKp.dag()))
         H = Hchem + Hint + Htee + Hteh + Hcavite + Hphoton
         H_p = Hchem + Hint + Hphoton
         H_i = Htee + Hteh + Hcavite
-
+        #print(Htee)
+        H_nocavity = Hchem+Hint+Htee+Hteh
+        [n,s] = H_nocavity.eigenstates()
+        print(n)
         return H,H_i,H_p
     
-    
+def info_st(s,nrj,label=-1):
+    print("Informations sur l'état "+str(label))
+    print("Energie : "+str(round(nrj,3)))
+    print("Gauche : "+str(round(qt.expect(nL, s),2))+" Droite : "+str(round(qt.expect(nR, s),2)))
+    print("Up : "+str(round(qt.expect(nUp, s),2))+ " Down : "+str(round(qt.expect(nDo, s),2)))
+    print("Photons g. : "+str(round(qt.expect(aLeft.dag()*aLeft, s),2)))
+    print("Photons d. : "+str(round(qt.expect(aRight.dag()*aRight, s),2)))
+    print("----------------------")
+
 def proj(H0, p_states, np_states):
     
     N = len(p_states)
@@ -160,12 +262,9 @@ def proj(H0, p_states, np_states):
     #Changement de base de la matrice mat4 vers la base {S,T,Sr,Sl,T+,T-}
     passage2 = np.array([[1,1,0,0],[-1, 1,0,0],[0,0,1,0],[0,0,0,1]])
     mat6 =np.linalg.inv(passage2)*mat4*passage2
-#    print(mat6)
-#    print("Checking singlet like")
-#    print((mat5[0,3]-mat5[1,3])*np.sqrt(2))
-#    print((mat4[0,3]-mat4[1,3])*np.sqrt(2))
+
     alphaL = (mat4[0,3]-mat4[1,3])*np.sqrt(2)
-    alphaR = (mat5[0,3]-mat5[1,3])*np.sqrt(2) 
+    alphaR = (mat5[0,3]-mat5[1,3])*np.sqrt(2)
     return alphaL, alphaR  #mat4 = Left /mat5 = R
 
 def evaluate(e_sum, e_delta, e_mag, e_asym):
@@ -174,7 +273,7 @@ def evaluate(e_sum, e_delta, e_mag, e_asym):
 #    for l in range(len(etats)):
 #        for m in range(len(etats)):
 #            print(np.round(np.real(etats[l].overlap(H*etats[m])),5), end = " ")
-#        print()
+#        print()        
         
     #Calcul des ep non perturbés
     [nrjs, states] = H_no.eigenstates()
@@ -191,7 +290,7 @@ def evaluate(e_sum, e_delta, e_mag, e_asym):
                 iMaxi = i
 
         st = states[iMaxi]
-        #print(str(iMaxi)+" overlap : "+str(maxi)+" @"+str(np.round(nrjs[iMaxi],4))+" "+str(qt.expect(nL, st))+" "+str(qt.expect(nR,st)))
+        print(str(iMaxi)+" overlap : "+str(maxi)+" @"+str(np.round(nrjs[iMaxi],4))+" "+str(qt.expect(nL, st))+" "+str(qt.expect(nR,st)))
         if qt.expect(nL, st)>0.8 and qt.expect(nL, st)<1.2 and qt.expect(nR, st)>0.8 and qt.expect(nR,st)<1.2:
             pos = CENTER
         if qt.expect(nL, st)>1.2:
@@ -199,15 +298,16 @@ def evaluate(e_sum, e_delta, e_mag, e_asym):
         if qt.expect(nR, st)>1.2:
             pos = RIGHT
         nrj = nrjs[iMaxi]
+
         real_states.append(states[iMaxi])
         i_s.append(iMaxi)
         positions.append((pos+delta*j, nrj))
         #ax.scatter(pos+delta*j, nrj,marker='_', color='b', linewidths='10')
         #ax.text(pos+delta*j, nrj,etats_txt[j],fontsize='14')
     #Calcul des ep perturbés 
-    [nrjs, states2] = H.eigenstates()
+    [nrjs2, states2] = H.eigenstates()
     r_i_states = []
-    #print("--------------------")
+    print("--------------------")
     for j in range(len(real_states)):
         maxi = 0
         iMaxi = 0
@@ -215,30 +315,70 @@ def evaluate(e_sum, e_delta, e_mag, e_asym):
             if np.abs(real_states[j].overlap(states2[i]))>maxi: #Calcul de <phi|phi_perturbe>
                 maxi = np.abs(real_states[j].overlap(states2[i]))
                 iMaxi = i
-        #print(str(iMaxi)+" overlap : "+str(maxi)+" @"+str(np.round(nrjs[iMaxi],4))+" "+str(qt.expect(nL, states2[iMaxi]))+" "+str(qt.expect(nR,states2[iMaxi])))
+        print(str(iMaxi)+" overlap : "+str(maxi)+" @"+str(np.round(nrjs2[iMaxi],4))+" "+str(qt.expect(nL, states2[iMaxi]))+" "+str(qt.expect(nR,states2[iMaxi])))
         r_i_states.append(states2[iMaxi])
-        
+    
+    #analyse(states2, nrjs)
+    #print(states2[48])
     alphaL, alphaR = proj(H, r_i_states, etats)
-
-    return alphaL, alphaR
+    return alphaL, alphaR,nrjs
 
 
 U = 250
 Um = 0
 #DeltaKKp = 500
-tee = 5
-teh = 0
-theta = np.pi/2
+tee = 3.45
+teh = 3
+theta = 0
 e_sum = 1000
-b_l = 3.5
-b_r = 2.5
-    
-if 1==0:
-    g = 0
-    e_delta = 0.9*U
+b_l = 5.5
+b_r = 4.5
+
+n_min = 45
+n_max = 62
+"""
+epsilons = np.linspace(-U*1.05,-0.95*U,100)
+trace = np.zeros((n_max-n_min+1,len(epsilons)))
+
+for j,eps in enumerate(epsilons):
+    H,_,_ = Hamiltonian(e_sum, eps,5, 0.1, 0.4)
+    [nrjs, states] = H.eigenstates()
+    trace[:,j] = nrjs[n_min:n_max+1].copy()
+for i in range(trace.shape[0]):
+    plt.scatter(epsilons/U, trace[i,:])
+plt.show()
+"""
+def identify_transition(delta_e, states, energies, frequency):
+    print("Looking for transition @ 1/2pi*"+str(np.round(delta_e,5))+" GHz")
+    print("Cavity frequency : "+str(frequency))
+    couple_maxi = (0,0)
+    maxi = 1000
+    for i in range(len(states)):
+        for j in range(len(states)):
+            if np.abs((energies[i]-(energies[j]+frequency))-delta_e)<maxi:
+                maxi = np.abs((energies[i]-(energies[j]+frequency))-delta_e)
+                couple_maxi = (i,j)
+
+    print("Between states #"+str(couple_maxi[0])+" and #"+str(couple_maxi[1]))
+    print("Frequency found : "+str(energies[couple_maxi[0]]-energies[couple_maxi[1]]-frequency)+" *1/2pi GHz")
+    print()
+    print(info_st(states[couple_maxi[0]], energies[couple_maxi[0]],couple_maxi[0]))
+    print(info_st(states[couple_maxi[1]], energies[couple_maxi[1]],couple_maxi[1]))
+
+if 1==1:
+    e_delta = -0.85*U
     psi0 = singlet
-    times = np.linspace(0,200,2001)
-    H,_,_ = Hamiltonian(e_sum, e_delta, 5, 0.1, g=0.4)
+    n = 4500
+    times = np.linspace(0,1000,n)
+    k = np.arange(n)
+    Fs = n/(times[-1]-times[0])
+    print("Sample frequency : "+str(Fs))
+    print("Fmin : 4")
+    frq = np.linspace(0, Fs/2, int(n/2))*2*np.pi
+    H,_,_ = Hamiltonian(e_sum, e_delta,5, 0.1, 0.4)
+    [nn, ss] = H.eigenstates()
+
+
     observ = [nL, nR, aLeft.dag()*aLeft, aRight.dag()*aRight]
     result = qt.mesolve(H, psi0, times, [], observ)
 #    
@@ -248,27 +388,38 @@ if 1==0:
 #        exp_nR.append(result.expect[1][t])
 #        exp_aL.append(result.expect[2][t])
 #        exp_aR.append(result.expect[3][t])
-    
-#    plt.close('all')
+    #FFT    
+    YL_FFT = np.abs(np.fft.fft(result.expect[2]-np.max(result.expect[2])/2))/n
+    YL_FFT = YL_FFT[range(int(n/2))]
+    YR_FFT = np.abs(np.fft.fft(result.expect[3]-np.max(result.expect[3])/2))/n
+    YR_FFT = YR_FFT[range(int(n/2))]
+    #end FFT
+    plt.show()
+    plt.close('all')
     fig, ax = plt.subplots(2,1)
-    ax[0].plot(times, result.expect[0], label='left')
-    ax[0].plot(times, result.expect[1], label='right')
-    ax[0].set_ylabel("<n>")
+    ax[0].set_title("Evolution for e_delta = "+str(np.round(e_delta/U,3))+"U")
+    ax[0].plot(times, result.expect[2], label='left')
+    ax[0].plot(times, result.expect[3], label='right')
+    ax[0].set_xlabel("Time")
+    ax[0].set_ylabel("<âa>")
     ax[0].legend()
     
-    ax[1].plot(times, result.expect[2], label="left")
-    ax[1].plot(times, result.expect[3], label='right')
-    ax[1].set_ylabel("<a^\daggera>")
+    ax[1].plot(frq, YL_FFT, label="FFT_L")
+    ax[1].plot(frq, YR_FFT, label='FFT_R')
+    ax[1].set_ylabel("amplitude")
+    ax[1].set_xlabel("frequency")
     ax[1].legend()
+    plt.show()
     
-if 1==1:
-    g = 0.2 
-    es = np.linspace(-1.1*U,1.1*U, 51)
+if 1==0:
+    g = 0.4
+    es = np.linspace(-U,-0.97*U, 100)
     Y = []
     y = []
     y2 = []
     alphaL, alphaR = [], []
     gtot = []
+    st_1, st_2 = [],[]
     for i_e, e_delta in enumerate(es):
         print(i_e)
         A = 1/((b_r-b_l)-(U+e_delta))*1/(-(b_l+b_r)-(U+e_delta))
@@ -277,28 +428,34 @@ if 1==1:
         B2 = -1/((b_l-b_r)-(U-e_delta))*1/(-(b_l+b_r)-(U-e_delta))
         y.append(tee**2*np.sin(theta)/np.sqrt(2)*(A-B))
         y2.append(tee**2*np.sin(theta)/np.sqrt(2)*(A2-B2))
-        aL, aR = evaluate(e_sum, e_delta, 5,0.1)
+        aL, aR,nrjs = evaluate(e_sum, e_delta, 5,0.1)
         alphaL.append(aL)
         alphaR.append(aR)
+        st_1.append(nrjs[48])
+        st_2.append(nrjs[50])
         gtot.append(g*(aL-aR))
     es /=U
 #    plt.plot(es, y,label="alpha_L")
 #    plt.close('all')
     fig, ax = plt.subplots(2,1)
     ax[0].plot(es, y, '--', label="1st order")
-    ax[0].plot(es, alphaR, '*', label="exact diag")
+    ax[0].plot(es, alphaL, '*', label="exact diag")
     ax[0].set_ylabel("alpha_R")
+    ax[0].set_xlabel("e_delta")
     ax[0].legend()
     
     ax[1].plot(es, y2, '--', label="1st order")
-    ax[1].plot(es, alphaL, '*', label="exact diag")
+    ax[1].plot(es, alphaR, '*', label="exact diag")
     ax[1].set_ylabel("alpha_L")
+    ax[1].set_xlabel("e_delta")
     ax[1].legend()
-    
+    #ax.title("alphaL and alphaR coefficients")
     fig, ax = plt.subplots()
-    ax.plot(es, gtot, '*', label="exact diag")
+    #ax.scatter(es,st_1)
+    #ax.scatter(es,st_2)
+    ax.plot(es, gtot, '*', label="exact      diag")
     ax.set_ylabel("g*(alpha_L - alpha_R) (GHz)")
     ax.legend()
     ax.set_xlabel("e_delta/U")
-    #plt.show()
+    plt.show()
     
