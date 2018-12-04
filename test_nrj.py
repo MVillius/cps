@@ -89,21 +89,18 @@ r'$\downarrow_{K^p}$'+","r'$\downarrow_{K^p}$',r'$\uparrow_{K^p}\downarrow_{K^p}
 
 
 
-def Hamiltonian(e_sum, e_delta, e_mag, e_asym, g=0.2):
+def Hamiltonian(e_sum, e_delta, bL, bR, g=0.2):
         print("------")
-        print(e_sum)
-        print(e_delta)
-        print(e_mag*(1+e_asym))
-        print(e_mag*(1-e_asym))
-        print("------")
-        omega0L = 2*e_mag*(1+e_asym)
-        omega0R = 2*e_mag*(1-e_asym)
-        e_LUp = (e_sum+e_delta)/2 - e_mag*(1+e_asym)
-        e_LDo = (e_sum+e_delta)/2 + e_mag*(1+e_asym)
-        e_RUp = (e_sum-e_delta)/2 - e_mag*(1-e_asym)
-        e_RDo = (e_sum-e_delta)/2 + e_mag*(1-e_asym)    
-        print(omega0L)
-        print(omega0R)
+        print('e_sum =',e_sum)
+        print('e_delta =',e_delta)
+        print('bL =',bL)
+        print('bR =',bR)
+        omega0L = 2*bL
+        omega0R = 2*bR
+        e_LUp = (e_sum+e_delta)/2 - bL
+        e_LDo = (e_sum+e_delta)/2 + bL
+        e_RUp = (e_sum-e_delta)/2 - bR
+        e_RDo = (e_sum-e_delta)/2 + bR   
         Hchem = e_LUp*(LUpKp.dag()*LUpKp) +\
                 e_LDo*(LDoKp.dag()*LDoKp) + \
                 e_RUp*(RUpKp.dag()*RUpKp) + \
@@ -168,9 +165,9 @@ def proj(H0, p_states, np_states):
     alphaR = (mat5[0,3]-mat5[1,3])*np.sqrt(2) 
     return alphaL, alphaR  #mat4 = Left /mat5 = R
 
-def evaluate(e_sum, e_delta, e_mag, e_asym):
+def evaluate(e_sum, e_delta, bL, bR):
     
-    H,H_i,H_no = Hamiltonian(e_sum, e_delta, e_mag, e_asym)
+    H,H_i,H_no = Hamiltonian(e_sum, e_delta, bL, bR)
 #    for l in range(len(etats)):
 #        for m in range(len(etats)):
 #            print(np.round(np.real(etats[l].overlap(H*etats[m])),5), end = " ")
@@ -222,6 +219,19 @@ def evaluate(e_sum, e_delta, e_mag, e_asym):
 
     return alphaL, alphaR
 
+def firstorder(e_delta,side):
+    
+    if side == 'left':
+        AL = 1/((bR*bR-bL*bL)-(U-e_delta)**2-2*bL*(U-e_delta))
+        BL = 1/((bL*bL-bR*bR)-(U-e_delta)**2-2*bR*(U-e_delta))
+        f_alphaL = tee**2*np.sin(theta)/np.sqrt(2)*(AL+BL)
+        return f_alphaL
+    
+    if side == 'right':
+        AR = 1/((bR*bR-bL*bL)-(U+e_delta)**2-2*bL*(U+e_delta))
+        BR = 1/((bL*bL-bR*bR)-(U+e_delta)**2-2*bR*(U+e_delta))
+        f_alphaR = tee**2*np.sin(theta)/np.sqrt(2)*(AR+BR)
+        return f_alphaR
 
 U = 250
 Um = 0
@@ -230,15 +240,73 @@ tee = 5
 teh = 0
 theta = np.pi/2
 e_sum = 1000
-b_l = 3.5
-b_r = 2.5
+bL = 3.5
+bR = 3
+    
+if 1==1:
+    Nf = 201
+    Ne = 101
+    g = 0.2 
+    Y = []
+    y = []
+    y2 = []
+    alphaL, alphaR = [], []
+    gtot = []
+    for i_e, e_delta in enumerate(np.linspace(-1.1*U,1.1*U, Ne)):
+     
+        print(i_e)
+#        A = 1/((b_r-b_l)-(U+e_delta))*1/(-(b_l+b_r)-(U+e_delta))
+#        B = -1/((b_l-b_r)-(U+e_delta))*1/(-(b_l+b_r)-(U+e_delta))
+#        A2 = 1/((b_r-b_l)-(U-e_delta))*1/(-(b_l+b_r)-(U-e_delta))
+#        B2 = -1/((b_l-b_r)-(U-e_delta))*1/(-(b_l+b_r)-(U-e_delta))
+#        y.append(tee**2*np.sin(theta)/np.sqrt(2)*(A-B))
+#        y2.append(tee**2*np.sin(theta)/np.sqrt(2)*(A2-B2))
+        
+        aL, aR = evaluate(e_sum, e_delta, bL, bR, g)
+        alphaL.append(aL)
+        alphaR.append(aR)
+        gtot.append(g*(aL-aR))
+        
+    f_alphaL = firstorder(np.linspace(-1.1*U,1.1*U,Nf),'left')
+    f_alphaR = firstorder(np.linspace(-1.1*U,1.1*U,Nf),'right')
+    f_gtot = g*(f_alphaL-f_alphaR)
+    
+    
+#    plt.plot(es, y,label="alpha_L")
+    plt.close('all')
+    fig, ax = plt.subplots(2,1)
+    ax[0].plot(np.linspace(-1.1*U,1.1*U, Nf)/U, f_alphaR, '--', label="1st order")
+    ax[0].plot(np.linspace(-1.1*U,1.1*U, Ne)/U, alphaR, '*', label="numerical diag")
+    ax[0].set_ylabel(r"$\alpha_R$")
+    ax[0].set_ylim([-0.2,0.2])
+    ax[0].legend()
+    ax[0].grid()
+    
+    ax[1].plot(np.linspace(-1.1*U,1.1*U, Nf)/U, f_alphaL, '--', label="1st order")
+    ax[1].plot(np.linspace(-1.1*U,1.1*U, Ne)/U, alphaL, '*', label="numerical diag")
+    ax[1].set_ylabel(r"$\alpha_L$")
+    ax[1].set_xlabel(r"$e_\Delta/U$")
+    ax[1].set_ylim([-0.2,0.2])
+    ax[1].legend()
+    ax[1].grid()
+    
+    fig, ax = plt.subplots()
+    ax.plot(np.linspace(-1.1*U,1.1*U, Nf)/U, f_gtot, '--', label="1st order")
+    ax.plot(np.linspace(-1.1*U,1.1*U, Ne)/U, gtot, '*', label="numerical diag")
+    ax.set_ylabel(r"$g(\alpha_L - \alpha_R)$ (GHz)")
+    ax.set_ylim([-0.1,0.1])
+    ax.legend()
+    ax.grid()
+    ax.set_xlabel(r"$e_\Delta/U$")
+    #ax.title(r'$t_{ee}=5$, $g=0.2$, U=250')
+    #plt.show()
     
 if 1==0:
-    g = 0
+    g=0.2
     e_delta = 0.9*U
     psi0 = singlet
     times = np.linspace(0,200,2001)
-    H,_,_ = Hamiltonian(e_sum, e_delta, 5, 0.1, g=0.4)
+    H,_,_ = Hamiltonian(e_sum, e_delta, bL, bR, g)
     observ = [nL, nR, aLeft.dag()*aLeft, aRight.dag()*aRight]
     result = qt.mesolve(H, psi0, times, [], observ)
 #    
@@ -259,6 +327,7 @@ if 1==0:
     ax[1].plot(times, result.expect[2], label="left")
     ax[1].plot(times, result.expect[3], label='right')
     ax[1].set_ylabel("<a^\daggera>")
+<<<<<<< HEAD
     ax[1].legend()
     
 if 1==1:
@@ -302,3 +371,6 @@ if 1==1:
     ax.set_xlabel("e_delta/U")
     #plt.show()
     
+=======
+    ax[1].legend()
+>>>>>>> rewriting first order
