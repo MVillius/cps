@@ -1,9 +1,11 @@
 import numpy as np
 import qutip as qt
-import numpy as np
 from numpy import linalg as LA
 from scipy import stats
 import matplotlib.pyplot as plt
+import time
+
+
 sm = qt.sigmam()
 sz = qt.sigmaz()
 I = qt.identity(2)
@@ -63,10 +65,11 @@ nR = RUpKp.dag()*RUpKp + RDoKp.dag()*RDoKp
 nUp = LUpKp.dag()*LUpKp + RUpKp.dag()*RUpKp
 nDo = LDoKp.dag()*LDoKp + RDoKp.dag()*RDoKp
 nPhoton = aLeft.dag()*aLeft+aRight.dag()*aRight
+
 def comm(A,B):
     return A*B-B*A
-print(comm(LDoKp.dag()*RDoKp, nL)==-LDoKp.dag()*RDoKp)
-print(comm(LDoKp.dag()*RUpKp.dag(), nL)==-LDoKp.dag()*RUpKp.dag())
+#print(comm(LDoKp.dag()*RDoKp, nL)==-LDoKp.dag()*RDoKp)
+#print(comm(LDoKp.dag()*RUpKp.dag(), nL)==-LDoKp.dag()*RUpKp.dag())
 
 #Définition d'état
 s_r = (RUpKp.dag()*RDoKp.dag())*vac
@@ -182,32 +185,27 @@ def analyse(states,energies):
                         st_label,
                         fontsize='14')
     plt.show()
-def Hamiltonian(e_sum, e_delta, e_mag, e_asym, g=0.4):
+    
+def Hamiltonian(e_sum, e_delta, bL, bR, g=0.2, scanL=0, scanR=0):
         print("------")
-        print(e_sum)
-        print(e_delta)
-        print(e_mag*(1+e_asym))
-        print(e_mag*(1-e_asym))
-        print("------")
-        omega0L = 2*e_mag*(1+e_asym)
-        omega0R = 2*e_mag*(1-e_asym)
-        e_LUp = (e_sum+e_delta)/2 - e_mag*(1+e_asym)
-        e_LDo = (e_sum+e_delta)/2 + e_mag*(1+e_asym)
-        e_RUp = (e_sum-e_delta)/2 - e_mag*(1-e_asym)
-        e_RDo = (e_sum-e_delta)/2 + e_mag*(1-e_asym)    
-        print(omega0L)
-        print(omega0R)
+        print('e_sum='+str(e_sum))
+        print('e_delta='+str(e_delta))
+        print('bL='+str(bL))
+        print('bR='+str(bR))
+        omega0L = 2*bL + scanL
+        omega0R = 2*bR + scanR
+        e_LUp = (e_sum+e_delta)/2 - bL
+        e_LDo = (e_sum+e_delta)/2 + bL
+        e_RUp = (e_sum-e_delta)/2 - bR
+        e_RDo = (e_sum-e_delta)/2 + bR
+        print('omega0L='+str(omega0L))
+        print('omega0R='+str(omega0R))
         Hchem = e_LUp*(LUpKp.dag()*LUpKp) +\
                 e_LDo*(LDoKp.dag()*LDoKp) + \
                 e_RUp*(RUpKp.dag()*RUpKp) + \
                 e_RDo*(RDoKp.dag()*RDoKp)
 
         Hint = (U/2)*(nL*(nL-1)+nR*(nR-1)) + Um*nL*nR
-
-#        HKKp = DeltaKKp * (LUpK.dag()*LUpK+LDoK.dag()*LDoK+\
-#                           RUpK.dag()*RUpK+RDoK.dag()*RDoK-\
-#                           LUpKp.dag()*LUpKp-LDoKp.dag()*LDoKp-\
-#                           RUpKp.dag()*RUpKp-RDoKp.dag()*RDoKp)
 
         Hteh = teh*np.cos(theta/2)*(LUpKp.dag()*RDoKp.dag()-LDoKp.dag()*RUpKp.dag()) +\
                teh*np.sin(theta/2)*(LUpKp.dag()*RUpKp.dag()+LDoKp.dag()*RDoKp.dag())
@@ -216,16 +214,17 @@ def Hamiltonian(e_sum, e_delta, e_mag, e_asym, g=0.4):
         Htee = tee*np.cos(theta/2)*(LUpKp.dag()*RUpKp + LDoKp.dag()*RDoKp) +\
                tee*np.sin(theta/2)*(-LUpKp.dag()*RDoKp + LDoKp.dag()*RUpKp)
         Htee += Htee.dag()
+        
         Hcavite = g*nL*(aLeft+aLeft.dag()) + g*nR*(aRight+aRight.dag())
         Hphoton = omega0L*(aLeft.dag()*aLeft)+omega0R*(aRight.dag()*aRight)
-        print(nL*(LUpKp.dag()*RDoKp.dag()-LDoKp.dag()*RUpKp.dag()).dag()*(LUpKp.dag()*RUpKp.dag()))
+#        print(nL*(LUpKp.dag()*RDoKp.dag()-LDoKp.dag()*RUpKp.dag()).dag()*(LUpKp.dag()*RUpKp.dag()))
         H = Hchem + Hint + Htee + Hteh + Hcavite + Hphoton
         H_p = Hchem + Hint + Hphoton
         H_i = Htee + Hteh + Hcavite
-        #print(Htee)
+#        print(Htee)
         H_nocavity = Hchem+Hint+Htee+Hteh
-        [n,s] = H_nocavity.eigenstates()
-        print(n)
+#        [n,s] = H_nocavity.eigenstates()
+#        print(n)
         return H,H_i,H_p
     
 def info_st(s,nrj,label=-1):
@@ -240,13 +239,13 @@ def info_st(s,nrj,label=-1):
 def proj(H0, p_states, np_states):
     
     N = len(p_states)
-    J = np.zeros((6,6))
-    base = [singlet, triplet, s_r, s_l,triplet_p, triplet_m]
-    for i in range(6):
-        for j in range(6):
-            J[i,j] = np.real(base[i].overlap(H0*base[j]))
-    passage = np.array([[1/np.sqrt(3),1/np.sqrt(3), 1/np.sqrt(3), 0,0,0],[1/np.sqrt(3), -1/np.sqrt(3), 1/np.sqrt(3),0,0,0], [1/np.sqrt(3),-1/np.sqrt(3), -1/np.sqrt(3),0,0,0],[0,0,0,1,0,0], [0,0,0,0,1,0],[0,0,0,0,0,1]])
-    transfo = np.linalg.inv(passage)*J*passage   
+#    J = np.zeros((6,6))
+#    base = [singlet, triplet, s_r, s_l,triplet_p, triplet_m]
+#    for i in range(6):
+#        for j in range(6):
+#            J[i,j] = np.real(base[i].overlap(H0*base[j]))
+#    passage = np.array([[1/np.sqrt(3),1/np.sqrt(3), 1/np.sqrt(3), 0,0,0],[1/np.sqrt(3), -1/np.sqrt(3), 1/np.sqrt(3),0,0,0], [1/np.sqrt(3),-1/np.sqrt(3), -1/np.sqrt(3),0,0,0],[0,0,0,1,0,0], [0,0,0,0,1,0],[0,0,0,0,0,1]])
+#    transfo = np.linalg.inv(passage)*J*passage   
 #    print(np.round(J,4))
 #    print(np.linalg.inv(passage))
 #    print(np.round(transfo,7))
@@ -260,16 +259,16 @@ def proj(H0, p_states, np_states):
             mat5[i,j] = np.real(sgn[i]*p_states[i].overlap(nR*sgn[j]*p_states[j]))
 
     #Changement de base de la matrice mat4 vers la base {S,T,Sr,Sl,T+,T-}
-    passage2 = np.array([[1,1,0,0],[-1, 1,0,0],[0,0,1,0],[0,0,0,1]])
-    mat6 =np.linalg.inv(passage2)*mat4*passage2
+#    passage2 = np.array([[1,1,0,0],[-1, 1,0,0],[0,0,1,0],[0,0,0,1]])
+#    mat6 =np.linalg.inv(passage2)*mat4*passage2
 
     alphaL = (mat4[0,3]-mat4[1,3])*np.sqrt(2)
     alphaR = (mat5[0,3]-mat5[1,3])*np.sqrt(2)
     return alphaL, alphaR  #mat4 = Left /mat5 = R
 
-def evaluate(e_sum, e_delta, e_mag, e_asym):
+def evaluate(e_sum, e_delta, bL, bR, g, scanL, scanR):
     
-    H,H_i,H_no = Hamiltonian(e_sum, e_delta, e_mag, e_asym)
+    H,H_i,H_no = Hamiltonian(e_sum, e_delta, bL, bR, g, scanL, scanR)
 #    for l in range(len(etats)):
 #        for m in range(len(etats)):
 #            print(np.round(np.real(etats[l].overlap(H*etats[m])),5), end = " ")
@@ -304,6 +303,7 @@ def evaluate(e_sum, e_delta, e_mag, e_asym):
         positions.append((pos+delta*j, nrj))
         #ax.scatter(pos+delta*j, nrj,marker='_', color='b', linewidths='10')
         #ax.text(pos+delta*j, nrj,etats_txt[j],fontsize='14')
+    
     #Calcul des ep perturbés 
     [nrjs2, states2] = H.eigenstates()
     r_i_states = []
@@ -321,22 +321,11 @@ def evaluate(e_sum, e_delta, e_mag, e_asym):
     #analyse(states2, nrjs)
     #print(states2[48])
     alphaL, alphaR = proj(H, r_i_states, etats)
-    return alphaL, alphaR,nrjs
+    return alphaL, alphaR, nrjs
 
-
-U = 250
-Um = 0
-#DeltaKKp = 500
-tee = 3.45
-teh = 3
-theta = 0
-e_sum = 1000
-b_l = 5.5
-b_r = 4.5
-
+"""
 n_min = 45
 n_max = 62
-"""
 epsilons = np.linspace(-U*1.05,-0.95*U,100)
 trace = np.zeros((n_max-n_min+1,len(epsilons)))
 
@@ -365,62 +354,103 @@ def identify_transition(delta_e, states, energies, frequency):
     print(info_st(states[couple_maxi[0]], energies[couple_maxi[0]],couple_maxi[0]))
     print(info_st(states[couple_maxi[1]], energies[couple_maxi[1]],couple_maxi[1]))
 
-if 1==1:
-    e_delta = -0.85*U
+if 1==1: 
+    plt.close('all')
+    
+    U = 250
+    Um = 0
+    tee = 3.45
+    teh = 3
+    theta = np.pi/2
+    e_sum = 1000
+    e_delta = 0.85*U
+    bL = 3.5
+    bR = 3.25
+    g = 0.2
+    scanR = np.linspace(-0.1, 0.1, 21)
+    
     psi0 = singlet
-    n = 4500
+    n = 10000
     times = np.linspace(0,1000,n)
     k = np.arange(n)
     Fs = n/(times[-1]-times[0])
     print("Sample frequency : "+str(Fs))
     print("Fmin : 4")
-    frq = np.linspace(0, Fs/2, int(n/2))*2*np.pi
-    H,_,_ = Hamiltonian(e_sum, e_delta,5, 0.1, 0.4)
-    [nn, ss] = H.eigenstates()
+    frq = np.linspace(0, Fs/2, int(n/2))*2*np.pi   # np.fft.fftfreq(n) ???
+    
+    maxL_time, maxR_time = [], []
+    for i_s, sR in enumerate(scanR):
+        start_time = time.time()
+        H,_,_ = Hamiltonian(e_sum, e_delta, bL, bR, g, scanR=sR)
+#       [nn, ss] = H.eigenstates()
+        observ = [nL, nR, aLeft.dag()*aLeft, aRight.dag()*aRight]
+        result = qt.mesolve(H, psi0, times, [], observ)
+        maxL_time.append(np.max(result.expect[2]))
+        argmaxL_time = np.argmax(result.expect[2])
+        gL_time = np.pi/argmaxL_time
+        maxR_time.append(np.max(result.expect[3]))
+        argmaxR_time = np.argmax(result.expect[3])
+        gR_time = np.pi/argmaxR_time
 
-
-    observ = [nL, nR, aLeft.dag()*aLeft, aRight.dag()*aRight]
-    result = qt.mesolve(H, psi0, times, [], observ)
-#    
-#    exp_nL, exp_nR, exp_aL, exp_aR = [], [], [], []
-#    for t, tim in enumerate(times):
-#        exp_nL.append(result.expect[0][t])
-#        exp_nR.append(result.expect[1][t])
-#        exp_aL.append(result.expect[2][t])
-#        exp_aR.append(result.expect[3][t])
-    #FFT    
-    YL_FFT = np.abs(np.fft.fft(result.expect[2]-np.max(result.expect[2])/2))/n
-    YL_FFT = YL_FFT[range(int(n/2))]
-    YR_FFT = np.abs(np.fft.fft(result.expect[3]-np.max(result.expect[3])/2))/n
-    YR_FFT = YR_FFT[range(int(n/2))]
-    #end FFT
-    plt.show()
-    plt.close('all')
+        YL_FFT = np.abs(np.fft.fft(result.expect[2]-np.max(result.expect[2])/2))/n
+        YL_FFT = YL_FFT[range(int(n/2))]
+        YR_FFT = np.abs(np.fft.fft(result.expect[3]-np.max(result.expect[3])/2))/n
+        YR_FFT = YR_FFT[range(int(n/2))]
+        gL_freq = frq[np.argmax(YL_FFT)]
+        gR_freq = frq[np.argmax(YR_FFT)]
+        
+        print('location max time (L,R) = '+str(argmaxL_time)+', '+str(argmaxR_time))
+        print('gL (time/freq, GHz) = '+str(gL_time)+', '+str(gL_freq))
+        print('gR (time/freq, GHz) = '+str(gR_time)+', '+str(gR_freq))
+        
+    
+        fig, ax = plt.subplots(2,1)
+        ax[0].set_title("Evolution for e_delta = "+str(np.round(e_delta/U,3))+"U")
+        ax[0].plot(times, result.expect[2], label='left')
+        ax[0].plot(times, result.expect[3], label='right')
+        ax[0].set_xlabel("Time")
+        ax[0].set_ylabel("<âa>")
+        ax[0].legend()
+        
+        ax[1].plot(frq, YL_FFT, label="FFT_L")
+        ax[1].plot(frq, YR_FFT, label='FFT_R')
+        ax[1].set_ylabel("amplitude")
+        ax[1].set_xlabel("frequency")
+        ax[1].legend()
+        plt.show()
+        
+        print('time elapsed = '+str(time.time()-start_time))
+       
     fig, ax = plt.subplots(2,1)
-    ax[0].set_title("Evolution for e_delta = "+str(np.round(e_delta/U,3))+"U")
-    ax[0].plot(times, result.expect[2], label='left')
-    ax[0].plot(times, result.expect[3], label='right')
-    ax[0].set_xlabel("Time")
-    ax[0].set_ylabel("<âa>")
+    ax[0].set_title('e_delta, bL, bR, g = '+str(e_delta)+', '+str(bL)+', '+str(bR)+', '+str(g))
+    ax[0].plot(scanR, maxL_time, label='left')
+    ax[0].plot(scanR, maxR_time, label='right')
+    ax[0].set_xlabel(r"\omega_R - 2b_R")
+    ax[0].set_ylabel(r"max(<a_i^\dagger a_i>)")
     ax[0].legend()
     
-    ax[1].plot(frq, YL_FFT, label="FFT_L")
-    ax[1].plot(frq, YR_FFT, label='FFT_R')
-    ax[1].set_ylabel("amplitude")
-    ax[1].set_xlabel("frequency")
-    ax[1].legend()
     plt.show()
+        
     
 if 1==0:
-    g = 0.4
-    es = np.linspace(-U,-0.97*U, 100)
+    U = 250
+    Um = 0
+    tee = 3.45
+    teh = 3
+    theta = np.pi/2
+    e_sum = 1000
+    e_deltas = np.linspace(-U,-0.97*U, 100)
+    bL = 5.5
+    bR = 4.5
+    g = 0.2
+
     Y = []
     y = []
     y2 = []
     alphaL, alphaR = [], []
     gtot = []
     st_1, st_2 = [],[]
-    for i_e, e_delta in enumerate(es):
+    for i_e, e_delta in enumerate(e_deltas):
         print(i_e)
         A = 1/((b_r-b_l)-(U+e_delta))*1/(-(b_l+b_r)-(U+e_delta))
         B = -1/((b_l-b_r)-(U+e_delta))*1/(-(b_l+b_r)-(U+e_delta))
@@ -428,24 +458,24 @@ if 1==0:
         B2 = -1/((b_l-b_r)-(U-e_delta))*1/(-(b_l+b_r)-(U-e_delta))
         y.append(tee**2*np.sin(theta)/np.sqrt(2)*(A-B))
         y2.append(tee**2*np.sin(theta)/np.sqrt(2)*(A2-B2))
-        aL, aR,nrjs = evaluate(e_sum, e_delta, 5,0.1)
+        aL, aR, nrjs = evaluate(e_sum, e_delta, bL, bR, g)
         alphaL.append(aL)
         alphaR.append(aR)
         st_1.append(nrjs[48])
         st_2.append(nrjs[50])
         gtot.append(g*(aL-aR))
-    es /=U
+    e_deltas /=U
 #    plt.plot(es, y,label="alpha_L")
 #    plt.close('all')
     fig, ax = plt.subplots(2,1)
-    ax[0].plot(es, y, '--', label="1st order")
-    ax[0].plot(es, alphaL, '*', label="exact diag")
+    ax[0].plot(e_deltas, y, '--', label="1st order")
+    ax[0].plot(e_deltas, alphaL, '*', label="exact diag")
     ax[0].set_ylabel("alpha_R")
     ax[0].set_xlabel("e_delta")
     ax[0].legend()
     
-    ax[1].plot(es, y2, '--', label="1st order")
-    ax[1].plot(es, alphaR, '*', label="exact diag")
+    ax[1].plot(e_deltas, y2, '--', label="1st order")
+    ax[1].plot(e_deltas, alphaR, '*', label="exact diag")
     ax[1].set_ylabel("alpha_L")
     ax[1].set_xlabel("e_delta")
     ax[1].legend()
