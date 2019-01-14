@@ -1,9 +1,14 @@
+# Objectif du programme
+# Déterminer l'évolution temporelle à partir de l'état vide
+# à l'aide de simulations temporelles sur QuTip
+
 import numpy as np
 import qutip as qt
 import numpy as np
 from numpy import linalg as LA
 from scipy import stats
 import matplotlib.pyplot as plt
+
 
 sm = qt.sigmam()
 sz = qt.sigmaz()
@@ -101,6 +106,7 @@ def Hamiltonian(e_sum, e_delta, e_mag, e_asym, g=0.4):
         return H_nocavity+Hcavite+Hphoton
 
 
+# Parameters 
 U = 250
 Um = 0
 teh = 1
@@ -115,16 +121,8 @@ b_r = e_mag*(1-asym)
 omega0L = 2*b_l
 omega0R = 2*b_r
 #DeltaKKp = 500 
-print("b_l{}".format(b_l))
+
 delta = b_l-b_r 
-
-N_teh, N_asym = 20, 20
-
-all_teh = np.linspace(0.1, 5,N_teh)
-all_asym = np.linspace(0, 2, N_asym)
-
-max_theorique = np.zeros((N_asym, N_teh))
-max_simu =np.zeros((N_asym, N_teh))
 
 singlet_op = (LUpKp.dag()*RDoKp.dag()-LDoKp.dag()*RUpKp.dag())
 triplet_0_op = (LUpKp.dag()*RDoKp.dag()-LDoKp.dag()*RUpKp.dag())    
@@ -132,11 +130,14 @@ singlet = singlet_op*vac
 singlet = singlet/singlet.norm()    
 triplet_0 = (LUpKp.dag()*RDoKp.dag()+LDoKp.dag()*RUpKp.dag())*vac
 triplet_0 = triplet_0/triplet_0.norm()
+
 times = np.linspace(0,5,1000)
 psi0 = vac
 omega = np.sqrt(delta**2+2*teh**2*np.cos(theta/2)**2)
 theory = np.array(([[(delta**2+2*teh**2*np.cos(theta/2)**2*np.cos(omega*t))/omega**2, -1j*np.sqrt(2)*teh*np.cos(theta/2)*np.sin(omega*t)/omega, delta*np.sqrt(2)*teh*np.cos(theta/2)*(np.cos(omega*t)-1)/omega**2] 
     for t in times]))
+#Données par la résolution analytique de l'équation de Schrodinger
+
 H = Hamiltonian(e_sum, e_delta, (b_l+b_r)/2, asym)
 result = qt.mesolve(H, psi0, times, [], [])
 
