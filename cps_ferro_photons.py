@@ -363,7 +363,7 @@ def state_label_compact(ii, state):
     print()
     """
     return label, pos
-def analyse(nb,omega): 
+def analyse(nb,omega): #Labels a state
     a = CPSF(e_sum,e_diff,e_mag,theta,mag_asym,omega)
     [nrj,st] = a.H.eigenstates()
     state = st[nb]
@@ -413,7 +413,7 @@ def analyse(nb,omega):
             elif nPL<0.8 and nPR<1.8:
                 print("0,1")
 
-def trace(e_sum, e_diff, e_mag, theta, mag_asym,omega0): #Affichage des états propres + énergies associées
+def trace(e_sum, e_diff, e_mag, theta, mag_asym,omega0): #Plot of eigenvalues of H + eigenstates
     fig, ax = plt.subplots()
     eigs = []
 

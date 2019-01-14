@@ -149,22 +149,23 @@ def Hamiltonian(p,e_sum, e_delta, b_l, b_r, theta, shift_l,shift_r,g=1):
 psi0 = singlet
 observ = [nL, nR, aLeft.dag()*aLeft, aRight.dag()*aRight] 
 arrondi = 10
-eds = np.linspace(-250,-0.95*250, 4)
+U = 100
+eds = np.linspace(-U*0.99,-0.99*U, 1)
 FLEX_TMAX = True #Allocation dynamique du nombre de points
 MAX_T = 2000 #Nombre de points maximum utilisé pour la simulation temporelle QuTip
-MAX_POINTS = 12 #Nombre de points pour la recherche dichotomique
+MAX_POINTS = 10 #Nombre de points pour la recherche dichotomique
 INCREASE = 1.5 #facteur de multiplication du nombre de points
 
 for ed in eds:
-    X = Params(50, ed, 3.5,3 , 250, 0, np.pi/2, 1, 1,1) #e_s, e_d, b_l, b_r,U, Um,theta, g,te, teh)
+    X = Params(100, ed, 3.5,3 , U, 0, np.pi/2, 1, 1,1) #e_s, e_d, b_l, b_r,U, Um,theta, g,te, teh)
     history =  {}
     #Initialisation des valeurs min/max
 
-    shift_freq_high = 1
-    shift_freq_low = -1
+    shift_freq_high = 2
+    shift_freq_low = -2
 
     if FLEX_TMAX:
-        Tmax = 100
+        Tmax = 200
     else:
         Tmax = 500
     #Recherche du maximum par recherche dichotomique
@@ -179,9 +180,12 @@ for ed in eds:
             iMax = np.argmax(result_low.expect[2]) 
             while FLEX_TMAX and np.abs(times[iMax]-Tmax) < 20 and Tmax<MAX_T: #Cette boucle vérifie qu'il s'agit bien d'un "vrai" maximum. Si ce n'est pas le cas on augmente Tmax jusqu'à atteindre un max
                 Tmax = INCREASE*Tmax
-                times = np.linspace(0,Tmax,Tmax*10) 
+                print("Increasing Tmax up to {}".format(Tmax))  
+                times = np.linspace(0,Tmax,Tmax*20) 
                 result_low = qt.mesolve(H_low, psi0, times, [], observ)
-                print("Increasing Tmax up to {}".format(Tmax))
+                iMax = np.argmax(result_low.expect[2])
+                print(times[iMax])
+                print(Tmax)
             maxi_low = np.max(result_low.expect[2])
             history[np.round(shift_freq_low,arrondi)] = maxi_low
         else: #Si la valeur a déjà été calculée précédemment 
@@ -194,9 +198,11 @@ for ed in eds:
             iMax = np.argmax(result_high.expect[2])
             while FLEX_TMAX and np.abs(times[iMax]-Tmax) < 20 and Tmax<2000:
                 Tmax = INCREASE*Tmax 
-                times = np.linspace(0,Tmax,Tmax*10)
-                result_high = qt.mesolve(H_high, psi0, times, [], observ)
                 print("Increasing Tmax up to {}".format(Tmax))
+                times = np.linspace(0,Tmax,Tmax*20)
+                result_high = qt.mesolve(H_high, psi0, times, [], observ)
+                iMax = np.argmax(result_high.expect[2])
+
             maxi_high =  np.max(result_high.expect[2])
             history[np.round(shift_freq_high,arrondi)] = maxi_high
         else: #Si la valeur a déjà été calculée
@@ -217,7 +223,7 @@ for ed in eds:
         if history[key]>maxi:
             maxi = history[key]
     for key in sorted(history):
-        if np.abs(history[key]-maxi)<0.05*maxi:# On ne conserve que les points près du maximum 
+        if np.abs(history[key]-maxi)<0.1*maxi:# On ne conserve que les points près du maximum 
             x_b.append(key)
             y_b.append(history[key])
     plt.plot(x_b,y_b, label=str(np.round(ed/X.U, 4)))
