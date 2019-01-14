@@ -1,14 +1,9 @@
-# Objectif du programme
-# Déterminer l'évolution temporelle à partir de l'état vide
-# à l'aide de simulations temporelles sur QuTip
-
-import numpy as np
+import numpy as np
 import qutip as qt
 import numpy as np
 from numpy import linalg as LA
 from scipy import stats
 import matplotlib.pyplot as plt
-
 
 sm = qt.sigmam()
 sz = qt.sigmaz()
@@ -72,13 +67,13 @@ nPhoton = aLeft.dag()*aLeft+aRight.dag()*aRight
 def comm(A,B):
     return A*B-B*A
 
-def Hamiltonian(e_sum, e_delta, e_mag, e_asym, g=0.4):
-        omega0L = 2*e_mag*(1+e_asym)
-        omega0R = 2*e_mag*(1-e_asym)
-        e_LUp = (e_sum+e_delta)/2 - e_mag*(1+e_asym)
-        e_LDo = (e_sum+e_delta)/2 + e_mag*(1+e_asym)
-        e_RUp = (e_sum-e_delta)/2 - e_mag*(1-e_asym)
-        e_RDo = (e_sum-e_delta)/2 + e_mag*(1-e_asym)    
+def Hamiltonian(e_sum, e_delta, bs, bd, g=0.4):
+        e_LUp = (e_sum+e_delta)/2 - (bs+bd)/2
+        e_LDo = (e_sum+e_delta)/2 + (bs+bd)/2
+        e_RUp = (e_sum-e_delta)/2 - (bs-bd)/2
+        e_RDo = (e_sum-e_delta)/2 + (bs-bd)/2
+        omega0L = (bs+bd)
+        omega0R = (bs-bd)
         print(omega0L)
         print(omega0R)
         Hchem = e_LUp*(LUpKp.dag()*LUpKp) +\
@@ -106,7 +101,6 @@ def Hamiltonian(e_sum, e_delta, e_mag, e_asym, g=0.4):
         return H_nocavity+Hcavite+Hphoton
 
 
-# Parameters 
 U = 250
 Um = 0
 teh = 1
@@ -114,15 +108,12 @@ theta = np.pi/4
 e_sum = 0
 e_delta = 0
 tee = teh*e_sum/40
-asym = 0.1
-e_mag = 5
-b_l = e_mag*(1+asym)
-b_r = e_mag*(1-asym)
-omega0L = 2*b_l
-omega0R = 2*b_r
+bd = 1
+bs = 10
+omega0L = 2*(bs+bd)
+omega0R = 2*(bs-bd)
 #DeltaKKp = 500 
-
-delta = b_l-b_r 
+delta = bd
 
 singlet_op = (LUpKp.dag()*RDoKp.dag()-LDoKp.dag()*RUpKp.dag())
 triplet_0_op = (LUpKp.dag()*RDoKp.dag()-LDoKp.dag()*RUpKp.dag())    
@@ -131,39 +122,67 @@ singlet = singlet/singlet.norm()
 triplet_0 = (LUpKp.dag()*RDoKp.dag()+LDoKp.dag()*RUpKp.dag())*vac
 triplet_0 = triplet_0/triplet_0.norm()
 
-times = np.linspace(0,5,1000)
-psi0 = vac
-omega = np.sqrt(delta**2+2*teh**2*np.cos(theta/2)**2)
-theory = np.array(([[(delta**2+2*teh**2*np.cos(theta/2)**2*np.cos(omega*t))/omega**2, -1j*np.sqrt(2)*teh*np.cos(theta/2)*np.sin(omega*t)/omega, delta*np.sqrt(2)*teh*np.cos(theta/2)*(np.cos(omega*t)-1)/omega**2] 
-    for t in times]))
-#Données par la résolution analytique de l'équation de Schrodinger
+delta_max, delta_tmax = [],[]
 
-H = Hamiltonian(e_sum, e_delta, (b_l+b_r)/2, asym)
-result = qt.mesolve(H, psi0, times, [], [])
+teh_s = np.linspace(0.1, 5, 40)
+sweep_teh = True
+#If not sweeping and plotting for only one value of tee turn off sweep_teh
+data = []
+for teh in teh_s:
+    times = np.linspace(0,20,600)
+    psi0 = vac
+    omega = np.sqrt(delta**2+2*teh**2*np.cos(theta/2)**2)
+    theory = np.array(([[(delta**2+2*teh**2*np.cos(theta/2)**2*np.cos(omega*t))/omega**2, -1j*np.sqrt(2)*teh*np.cos(theta/2)*np.sin(omega*t)/omega, delta*np.sqrt(2)*teh*np.cos(theta/2)*(np.cos(omega*t)-1)/omega**2] 
+        for t in times]))
+    theoretical_max = (2*teh**2*np.cos(theta/2)**2)/(2*teh**2*np.cos(theta/2)**2+delta**2)
+    theoretical_tmax = np.pi/(2*omega)
+
+    H = Hamiltonian(e_sum, e_delta, bs, bd)
+    result = qt.mesolve(H, psi0, times, [], [])
+    num_max, num_tmax = 0,0
+    for ii,st in enumerate(reversed(result.states)):
+        if np.abs(singlet.overlap(st))**2>num_max:
+            num_max = np.abs(singlet.overlap(st))**2
+            num_tmax = times[len(times)-ii-1]
+    data.append((theoretical_max, theoretical_tmax, num_max, num_tmax))
 
 
-singlet_op = (LUpKp.dag()*RDoKp.dag()-LDoKp.dag()*RUpKp.dag())
-triplet_0_op = (LUpKp.dag()*RDoKp.dag()-LDoKp.dag()*RUpKp.dag())
-singlet = singlet_op*vac
-singlet = singlet/singlet.norm()    
-triplet_0 = (LUpKp.dag()*RDoKp.dag()+LDoKp.dag()*RUpKp.dag())*vac
-triplet_0 = triplet_0/triplet_0.norm()
-result = qt.mesolve(H, psi0, times, [], [])
-r  = [[],[],[],[]]
-for i in range(len(result.states)):
-    st = result.states[i]
-    r[0].append(np.abs(singlet.overlap(st))**2)
-    r[1].append(np.abs(triplet_0.overlap(st))**2)
-    r[2].append(np.abs(vac.overlap(st))**2)
 
-plt.plot(times, r[0], label="Singlet")
-plt.plot(times, r[1], label="Triplet")
-plt.plot(times, r[2], label="Vac")
-plt.plot(times, np.abs(theory[:,1])**2, "--",label="Singlet (théorique)")
-plt.plot(times, np.abs(theory[:,2])**2, "--",label="Triplet (théorique)")
-plt.plot(times, np.abs(theory[:,0])**2, "--",label="Vac (théorique)")
+if not sweep_teh:
+    r  = [[],[],[],[]]
+    times2 = []
+    for i in range(len(result.states)):
+        if i%10==0:
+            times2.append(times[i])
+            st = result.states[i]
+            r[0].append(np.abs(singlet.overlap(st))**2)
+            r[1].append(np.abs(triplet_0.overlap(st))**2)
+            r[2].append(np.abs(vac.overlap(st))**2)
 
-plt.xlabel("Time (ns)")
-plt.legend()
-plt.title("Time evolution starting from vac")
-plt.show()
+    plt.scatter(times2, r[0], marker="+",label="Singlet")
+    plt.scatter(times2, r[1], marker="+",label="Triplet")
+    plt.scatter(times2, r[2], marker="+",label="Vac")
+    plt.plot(times, np.abs(theory[:,1])**2,label="Singlet (theory)")
+    plt.plot(times, np.abs(theory[:,2])**2,label="Triplet (theory)")
+    plt.plot(times, np.abs(theory[:,0])**2,label="Vac (theory)")
+    plt.xlabel("Time (ns)")
+    plt.legend()
+    plt.title("Time evolution starting from vac")
+    plt.show()
+else:
+    data = np.array(data)
+    fig, ax = plt.subplots(1,1)
+    ax.plot(np.square(teh_s), data[:,0],label="theory")
+    ax.scatter(np.square(teh_s), data[:,2],marker="+", label="Numeric")
+
+    #ax[1].plot(np.square(teh_s), data[:,1])
+    #ax[1].scatter(np.square(teh_s), data[:,3],marker="+")
+
+    ax.set_xlabel("t_ee**2")
+    #ax[1].set_xlabel("t_ee**2")
+    ax.set_title("Maximum of P(|S>)")
+    ax.legend()
+    #ax[1].set_title("Delta_max")
+    ax.fill_between(np.square(teh_s), 0, 1, where=(data[:,0]-data[:,2]) <=0.05, facecolor='green', alpha=0.2)
+    ax.fill_between(np.square(teh_s), 0, 1, where=(data[:,0]-data[:,2]) >=0.05, facecolor='red', alpha=0.2)
+    plt.show()
