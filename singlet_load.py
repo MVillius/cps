@@ -1,4 +1,4 @@
-import numpy as np
+import numpy as np
 import qutip as qt
 import numpy as np
 from numpy import linalg as LA
@@ -124,18 +124,19 @@ triplet_0 = triplet_0/triplet_0.norm()
 
 delta_max, delta_tmax = [],[]
 
-teh_s = np.linspace(0.1, 5, 40)
+teh_s = np.linspace(0.1,5, 50)
 sweep_teh = True
 #If not sweeping and plotting for only one value of tee turn off sweep_teh
 data = []
 for teh in teh_s:
-    times = np.linspace(0,20,600)
-    psi0 = vac
     omega = np.sqrt(delta**2+2*teh**2*np.cos(theta/2)**2)
+
+    theoretical_tmax = np.pi/(2*omega)
+    times = np.linspace(0,theoretical_tmax+0.4,600)
+    psi0 = vac
     theory = np.array(([[(delta**2+2*teh**2*np.cos(theta/2)**2*np.cos(omega*t))/omega**2, -1j*np.sqrt(2)*teh*np.cos(theta/2)*np.sin(omega*t)/omega, delta*np.sqrt(2)*teh*np.cos(theta/2)*(np.cos(omega*t)-1)/omega**2] 
         for t in times]))
     theoretical_max = (2*teh**2*np.cos(theta/2)**2)/(2*teh**2*np.cos(theta/2)**2+delta**2)
-    theoretical_tmax = np.pi/(2*omega)
 
     H = Hamiltonian(e_sum, e_delta, bs, bd)
     result = qt.mesolve(H, psi0, times, [], [])
@@ -144,7 +145,7 @@ for teh in teh_s:
         if np.abs(singlet.overlap(st))**2>num_max:
             num_max = np.abs(singlet.overlap(st))**2
             num_tmax = times[len(times)-ii-1]
-    data.append((theoretical_max, theoretical_tmax, num_max, num_tmax))
+    data.append((theoretical_max, 1/theoretical_tmax, num_max, 1/num_tmax))
 
 
 
@@ -152,7 +153,7 @@ if not sweep_teh:
     r  = [[],[],[],[]]
     times2 = []
     for i in range(len(result.states)):
-        if i%10==0:
+        if i%1==0:
             times2.append(times[i])
             st = result.states[i]
             r[0].append(np.abs(singlet.overlap(st))**2)
@@ -171,18 +172,21 @@ if not sweep_teh:
     plt.show()
 else:
     data = np.array(data)
-    fig, ax = plt.subplots(1,1)
-    ax.plot(np.square(teh_s), data[:,0],label="theory")
-    ax.scatter(np.square(teh_s), data[:,2],marker="+", label="Numeric")
+    fig, ax = plt.subplots(1,2)
+    ax[0].plot(np.square(teh_s), data[:,0],label="theory")
+    ax[0].scatter(np.square(teh_s), data[:,2],marker="+", label="numeric")
 
-    #ax[1].plot(np.square(teh_s), data[:,1])
-    #ax[1].scatter(np.square(teh_s), data[:,3],marker="+")
+    ax[1].plot(np.square(teh_s), data[:,1],label="theory")
+    ax[1].scatter(np.square(teh_s), data[:,3],marker="+", label="numeric")
 
-    ax.set_xlabel("t_ee**2")
-    #ax[1].set_xlabel("t_ee**2")
-    ax.set_title("Maximum of P(|S>)")
-    ax.legend()
-    #ax[1].set_title("Delta_max")
-    ax.fill_between(np.square(teh_s), 0, 1, where=(data[:,0]-data[:,2]) <=0.05, facecolor='green', alpha=0.2)
-    ax.fill_between(np.square(teh_s), 0, 1, where=(data[:,0]-data[:,2]) >=0.05, facecolor='red', alpha=0.2)
+    ax[0].set_xlabel(r"$t_{ee}^2$")
+    ax[1].set_xlabel(r"$t_{ee}^2$")
+    ax[0].set_title(r"Maximum of $P\left(|S>\right)$")
+    ax[0].legend()
+    ax[1].legend()
+    ax[1].set_title("Frequency")
+    ax[0].fill_between(np.square(teh_s), 0, 1, where=(data[:,0]-data[:,2]) <=0.01, facecolor='green', alpha=0.2)
+    ax[0].fill_between(np.square(teh_s), 0, 1, where=(data[:,0]-data[:,2]) >=0.01, facecolor='red', alpha=0.2)
+
     plt.show()
+
