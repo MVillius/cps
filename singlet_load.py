@@ -101,7 +101,7 @@ def Hamiltonian(e_sum, e_delta, bs, bd, g=0.4):
         return H_nocavity+Hcavite+Hphoton
 
 
-U = 250
+U = 150
 Um = 0
 teh = 1
 theta = np.pi/4
@@ -134,8 +134,8 @@ for teh in teh_s:
     theoretical_tmax = np.pi/(2*omega)
     times = np.linspace(0,theoretical_tmax+0.4,600)
     psi0 = vac
-    theory = np.array(([[(delta**2+2*teh**2*np.cos(theta/2)**2*np.cos(omega*t))/omega**2, -1j*np.sqrt(2)*teh*np.cos(theta/2)*np.sin(omega*t)/omega, delta*np.sqrt(2)*teh*np.cos(theta/2)*(np.cos(omega*t)-1)/omega**2] 
-        for t in times]))
+    theory = np.array(([[(delta**2+2*teh**2*np.cos(theta/2)**2*np.cos(omega*t))/omega**2, -1j*np.sqrt(2)*teh*np.cos(theta/2)*np.sin(omega*t)/omega, 
+delta*np.sqrt(2)*teh*np.cos(theta/2)*(np.cos(omega*t)-1)/omega**2] for t in times]))
     theoretical_max = (2*teh**2*np.cos(theta/2)**2)/(2*teh**2*np.cos(theta/2)**2+delta**2)
 
     H = Hamiltonian(e_sum, e_delta, bs, bd)
@@ -176,14 +176,19 @@ else:
     ax[0].plot(np.square(teh_s), data[:,0],label="theory")
     ax[0].scatter(np.square(teh_s), data[:,2],marker="+", label="numeric")
 
-    ax[1].plot(np.square(teh_s), data[:,1],label="theory")
-    ax[1].scatter(np.square(teh_s), data[:,3],marker="+", label="numeric")
-
-    ax[0].set_xlabel(r"$t_{ee}^2$")
-    ax[1].set_xlabel(r"$t_{ee}^2$")
+    ax[1].plot(teh_s, data[:,1],label="theory")
+    ax[1].scatter(teh_s, data[:,3],marker="+", label="numeric")
+    ax[0].set_ylim([0,1])
+    ax[0].set_xlim([0,25])
+    ax[0].set_xlabel(r"$t_{eh}^2$")
+    ax[1].set_xlabel(r"$t_{eh}$")
+    ax[0].set_ylabel("probability")
+    ax[1].set_ylabel("f (GHz)")
     ax[0].set_title(r"Maximum of $P\left(|S>\right)$")
     ax[0].legend()
     ax[1].legend()
+    ax[0].grid(c='lightgrey')
+    ax[1].grid(c='lightgrey')
     ax[1].set_title("Frequency")
     ax[0].fill_between(np.square(teh_s), 0, 1, where=(data[:,0]-data[:,2]) <=0.01, facecolor='green', alpha=0.2)
     ax[0].fill_between(np.square(teh_s), 0, 1, where=(data[:,0]-data[:,2]) >=0.01, facecolor='red', alpha=0.2)
