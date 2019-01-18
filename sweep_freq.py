@@ -149,25 +149,25 @@ def Hamiltonian(p,e_sum, e_delta, b_l, b_r, theta, shift_l,shift_r,g=1):
 psi0 = singlet
 observ = [nL, nR, aLeft.dag()*aLeft, aRight.dag()*aRight] 
 arrondi = 10
-U = 100
-eds = np.linspace(-U*0.99,-0.99*U, 1)
-FLEX_TMAX = True #Allocation dynamique du nombre de points
-MAX_T = 2000 #Nombre de points maximum utilisé pour la simulation temporelle QuTip
-MAX_POINTS = 10 #Nombre de points pour la recherche dichotomique
+U = 25
+tees = np.linspace(2,2,1)
+FLEX_TMAX = False #Allocation dynamique du nombre de points
+MAX_T = 5000 #Nombre de points maximum utilisé pour la simulation temporelle QuTip
+MAX_POINTS = 8 #Nombre de points pour la recherche dichotomique
 INCREASE = 1.5 #facteur de multiplication du nombre de points
 
-for ed in eds:
-    X = Params(100, ed, 3.5,3 , U, 0, np.pi/2, 1, 1,1) #e_s, e_d, b_l, b_r,U, Um,theta, g,te, teh)
+for tee in tees:
+    X = Params(40, 0, 6.5,5.5, U, 0, np.pi/2, 0.2, tee,1) #e_s, e_d, b_l, b_r,U, Um,theta, g,te, teh)
     history =  {}
     #Initialisation des valeurs min/max
 
-    shift_freq_high = 2
-    shift_freq_low = -2
+    shift_freq_high = 0.02
+    shift_freq_low = -0.02
 
     if FLEX_TMAX:
         Tmax = 200
     else:
-        Tmax = 500
+        Tmax = 5000 
     #Recherche du maximum par recherche dichotomique
     for i in range(0,MAX_POINTS):
         print("frequence low : {}".format(shift_freq_low))
@@ -226,6 +226,6 @@ for ed in eds:
         if np.abs(history[key]-maxi)<0.1*maxi:# On ne conserve que les points près du maximum 
             x_b.append(key)
             y_b.append(history[key])
-    plt.plot(x_b,y_b, label=str(np.round(ed/X.U, 4)))
+    plt.plot(x_b,y_b, label=str(np.round(tee, 4)))
 plt.legend()
 plt.show()
