@@ -65,8 +65,6 @@ nDo = LDoKp.dag()*LDoKp + RDoKp.dag()*RDoKp
 nPhoton = aLeft.dag()*aLeft+aRight.dag()*aRight
 def comm(A,B):
     return A*B-B*A
-print(comm(LDoKp.dag()*RDoKp, nL)==-LDoKp.dag()*RDoKp)
-print(comm(LDoKp.dag()*RUpKp.dag(), nL)==-LDoKp.dag()*RUpKp.dag())
 
 #Définition d'état
 s_r = (RUpKp.dag()*RDoKp.dag())*vac
@@ -74,6 +72,8 @@ s_r /= s_r.norm()
 s_l = (LUpKp.dag()*LDoKp.dag())*vac
 s_l /= s_l.norm()
 singlet = (LUpKp.dag()*RDoKp.dag()-LDoKp.dag()*RUpKp.dag())*vac
+s_ = (LUpKp.dag()*RDoKp.dag()-LDoKp.dag()*RUpKp.dag())/np.sqrt(2)
+tp =LUpKp.dag()*RUpKp.dag()
 singlet /= singlet.norm()
 triplet = (LUpKp.dag()*RDoKp.dag()+LDoKp.dag()*RUpKp.dag())*vac
 triplet /= triplet.norm()
@@ -89,6 +89,19 @@ etats = [LUpKp.dag()*RDoKp.dag()*vac, LDoKp.dag()*RUpKp.dag()*vac, triplet_m, tr
 
 etats_txt = [r'$\uparrow_{K^p}$'+","r'$\downarrow_{K^p}$', r'$\downarrow_{K^p}$'+","r'$\uparrow_{K^p}$',r'$\uparrow_{K^p}$'+","r'$\uparrow_{K^p}$',
 r'$\downarrow_{K^p}$'+","r'$\downarrow_{K^p}$',r'$\uparrow_{K^p}\downarrow_{K^p}$'+',o','o,'+r'$\uparrow_{K^p}\downarrow_{K^p}$']
+
+class Params:
+    def __init__(self, e_s, e_d, b_l, b_r,U, Um,theta, g,tee, teh):
+        self.e_sum = e_s
+        self.e_delta = e_d
+        self.b_l = b_l
+        self.b_r = b_r
+        self.U = U
+        self.Um = Um
+        self.theta = theta
+        self.g = g
+        self.tee = tee
+        self.teh = teh
 
 def label(ii, state):
     pos = 0
@@ -182,19 +195,59 @@ def analyse(states,energies):
                         st_label,
                         fontsize='14')
     plt.show()
-def Hamiltonian(e_sum, e_delta, e_mag, e_asym, g=0.4):
-        print("------")
-        print(e_sum)
-        print(e_delta)
-        print(e_mag*(1+e_asym))
-        print(e_mag*(1-e_asym))
-        print("------")
-        omega0L = 2*e_mag*(1+e_asym)
-        omega0R = 2*e_mag*(1-e_asym)
-        e_LUp = (e_sum+e_delta)/2 - e_mag*(1+e_asym)
-        e_LDo = (e_sum+e_delta)/2 + e_mag*(1+e_asym)
-        e_RUp = (e_sum-e_delta)/2 - e_mag*(1-e_asym)
-        e_RDo = (e_sum-e_delta)/2 + e_mag*(1-e_asym)    
+def HamiltonianRWA(p, e_sum, e_delta, bl, br, g):
+    omega0R = 2*br
+    e_LUp = (e_sum+e_delta)/2 - bl
+    e_LDo = (e_sum+e_delta)/2 + bl
+    e_RUp = (e_sum-e_delta)/2 - br
+    e_RDo = (e_sum-e_delta)/2 + br
+
+    sigma_plus_L = LUpKp.dag()*RUpKp.dag()*LDoKp*RUpKp
+    sigma_plus_R = LUpKp.dag()*RUpKp.dag()*LUpKp*RDoKp
+    sigma_moins_L =LDoKp.dag()*RUpKp.dag()*LUpKp*RUpKp
+    sigma_moins_R =LUpKp.dag()*RDoKp.dag()*LUpKp*RUpKp
+
+    sigma_z_L = LUpKp.dag()*RUpKp.dag()*LUpKp*RUpKp-LDoKp.dag()*RUpKp.dag()*LDoKp*RUpKp
+
+    alpha_R = 1
+    #alpha_R =p.tee*2*np.sin(p.theta/2)/(np.sqrt(2)*(p.U-e_delta)**2)
+    Hcoup = g*alpha_R*(sigma_moins_R*aRight.dag()-sigma_moins_L*aRight.dag()+sigma_plus_R*aRight-sigma_plus_L*aRight)
+    Hcoup+=Hcoup.dag()
+    H = ((e_LUp+e_RDo)*LUpKp.dag()*RDoKp.dag()*LUpKp*RDoKp+(e_LDo+e_RUp)*LDoKp.dag()*RUpKp.dag()*LDoKp*RUpKp+(e_LUp+e_RUp)*LUpKp.dag()*RUpKp.dag()*LUpKp*RUpKp) + omega0R*aLeft.dag()*aLeft -omega0R*sigma_z_L
+    return H+Hcoup
+
+def HamiltonianRWA2(p, e_sum, e_delta, bl, br, g):
+    omega0R = 2*br
+    omega0L = 2*bl
+
+    e_LUp = (e_sum+e_delta)/2 - bl
+    e_LDo = (e_sum+e_delta)/2 + bl
+    e_RUp = (e_sum-e_delta)/2 - br
+    e_RDo = (e_sum-e_delta)/2 + br
+
+    sigma_plus_L = LUpKp.dag()*RUpKp.dag()*LDoKp*RUpKp
+    sigma_plus_R = LUpKp.dag()*RUpKp.dag()*LUpKp*RDoKp
+    sigma_moins_L =LDoKp.dag()*RUpKp.dag()*LUpKp*RUpKp
+    sigma_moins_R =LUpKp.dag()*RDoKp.dag()*LUpKp*RUpKp
+
+    sigma_z_L = LUpKp.dag()*RUpKp.dag()*LUpKp*RUpKp-LDoKp.dag()*RUpKp.dag()*LDoKp*RUpKp
+    sigma_z_R = LUpKp.dag()*RUpKp.dag()*LUpKp*RUpKp-LUpKp.dag()*RDoKp.dag()*LUpKp*RDoKp
+
+    alpha_L, alpha_R = 1,1
+    Delta_L, Delta_R = (2*omega0L-omega0R)/3, (2*omega0R-omega0L)/3
+    Omega = (omega0L+omega0R)/2
+    Hc = Delta_L*sigma_z_L+Delta_R*sigma_z_R
+    Hcoupl = g**2*alpha_L*alpha_R/2*(1/(Omega-omega0L)+1/(Omega-omega0R))*sigma_moins_R*aLeft.dag()*sigma_moins_L*aRight.dag()
+    Hcoupl += Hcoupl.dag()
+    H = Hc+Hcoupl
+    return H
+def Hamiltonian(p,e_sum, e_delta, b_l, b_r, theta, shift_l,shift_r,g=1):
+        omega0L = 2*b_l - shift_l
+        omega0R = 2*b_r - shift_r
+        e_LUp = (e_sum+p.e_delta)/2 - b_l
+        e_LDo = (e_sum+p.e_delta)/2 + b_l
+        e_RUp = (e_sum-p.e_delta)/2 - b_r
+        e_RDo = (e_sum-p.e_delta)/2 + b_r
         print(omega0L)
         print(omega0R)
         Hchem = e_LUp*(LUpKp.dag()*LUpKp) +\
@@ -202,30 +255,27 @@ def Hamiltonian(e_sum, e_delta, e_mag, e_asym, g=0.4):
                 e_RUp*(RUpKp.dag()*RUpKp) + \
                 e_RDo*(RDoKp.dag()*RDoKp)
 
-        Hint = (U/2)*(nL*(nL-1)+nR*(nR-1)) + Um*nL*nR
+        Hint = (p.U/2)*(nL*(nL-1)+nR*(nR-1)) + p.Um*nL*nR
 
 #        HKKp = DeltaKKp * (LUpK.dag()*LUpK+LDoK.dag()*LDoK+\
 #                           RUpK.dag()*RUpK+RDoK.dag()*RDoK-\
 #                           LUpKp.dag()*LUpKp-LDoKp.dag()*LDoKp-\
 #                           RUpKp.dag()*RUpKp-RDoKp.dag()*RDoKp)
 
-        Hteh = teh*np.cos(theta/2)*(LUpKp.dag()*RDoKp.dag()-LDoKp.dag()*RUpKp.dag()) +\
-               teh*np.sin(theta/2)*(LUpKp.dag()*RUpKp.dag()+LDoKp.dag()*RDoKp.dag())
+        Hteh = p.teh*np.cos(p.theta/2)*(LUpKp.dag()*RDoKp.dag()-LDoKp.dag()*RUpKp.dag()) +\
+               p.teh*np.sin(p.theta/2)*(LUpKp.dag()*RUpKp.dag()+LDoKp.dag()*RDoKp.dag())
         Hteh += Hteh.dag()
         
-        Htee = tee*np.cos(theta/2)*(LUpKp.dag()*RUpKp + LDoKp.dag()*RDoKp) +\
-               tee*np.sin(theta/2)*(-LUpKp.dag()*RDoKp + LDoKp.dag()*RUpKp)
+        Htee = p.tee*np.cos(p.theta/2)*(LUpKp.dag()*RUpKp + LDoKp.dag()*RDoKp) +\
+               p.tee*np.sin(p.theta/2)*(-LUpKp.dag()*RDoKp + LDoKp.dag()*RUpKp)
         Htee += Htee.dag()
-        Hcavite = g*nL*(aLeft+aLeft.dag()) + g*nR*(aRight+aRight.dag())
+        Hcavite = p.g*singlet.overlap(nL*triplet_p)*(s_.dag()*tp+tp.dag()*s_)*(aLeft+aLeft.dag()) + p.g*nR*(aRight+aRight.dag())
         Hphoton = omega0L*(aLeft.dag()*aLeft)+omega0R*(aRight.dag()*aRight)
-        print(nL*(LUpKp.dag()*RDoKp.dag()-LDoKp.dag()*RUpKp.dag()).dag()*(LUpKp.dag()*RUpKp.dag()))
         H = Hchem + Hint + Htee + Hteh + Hcavite + Hphoton
         H_p = Hchem + Hint + Hphoton
         H_i = Htee + Hteh + Hcavite
-        #print(Htee)
         H_nocavity = Hchem+Hint+Htee+Hteh
         [n,s] = H_nocavity.eigenstates()
-        print(n)
         return H,H_i,H_p
     
 def info_st(s,nrj,label=-1):
@@ -270,10 +320,6 @@ def proj(H0, p_states, np_states):
 def evaluate(e_sum, e_delta, e_mag, e_asym):
     
     H,H_i,H_no = Hamiltonian(e_sum, e_delta, e_mag, e_asym)
-#    for l in range(len(etats)):
-#        for m in range(len(etats)):
-#            print(np.round(np.real(etats[l].overlap(H*etats[m])),5), end = " ")
-#        print()        
         
     #Calcul des ep non perturbés
     [nrjs, states] = H_no.eigenstates()
@@ -317,145 +363,31 @@ def evaluate(e_sum, e_delta, e_mag, e_asym):
                 iMaxi = i
         print(str(iMaxi)+" overlap : "+str(maxi)+" @"+str(np.round(nrjs2[iMaxi],4))+" "+str(qt.expect(nL, states2[iMaxi]))+" "+str(qt.expect(nR,states2[iMaxi])))
         r_i_states.append(states2[iMaxi])
-    
-    #analyse(states2, nrjs)
-    #print(states2[48])
     alphaL, alphaR = proj(H, r_i_states, etats)
     return alphaL, alphaR,nrjs
 
 
-U = 250
-Um = 0
-#DeltaKKp = 500
-tee = 3.45
-teh = 3
-theta = 0
-e_sum = 1000
-b_l = 5.5
-b_r = 4.5
+## Parameters
+X = Params(50, 0, 6.5,5.5 ,50, 0, np.pi/2, 0.2, 1,1) #e_s, e_d, b_l, b_r,U, Um,theta, g,te, teh)
+n = 7000   
+###
 
-n_min = 45
-n_max = 62
-"""
-epsilons = np.linspace(-U*1.05,-0.95*U,100)
-trace = np.zeros((n_max-n_min+1,len(epsilons)))
+times = np.linspace(0,1000,n)
+psi0 = singlet
+H,_,_ = Hamiltonian(X, X.e_sum, X.e_delta, X.b_l, X.b_r,X.theta,0.0059,0, 1) 
+[nn, ss] = H.eigenstates()
+observ = [nL, nR, aLeft.dag()*aLeft, aRight.dag()*aRight]
+result = qt.mesolve(H, psi0, times, [], observ)
 
-for j,eps in enumerate(epsilons):
-    H,_,_ = Hamiltonian(e_sum, eps,5, 0.1, 0.4)
-    [nrjs, states] = H.eigenstates()
-    trace[:,j] = nrjs[n_min:n_max+1].copy()
-for i in range(trace.shape[0]):
-    plt.scatter(epsilons/U, trace[i,:])
+### Plot
 plt.show()
-"""
-def identify_transition(delta_e, states, energies, frequency):
-    print("Looking for transition @ 1/2pi*"+str(np.round(delta_e,5))+" GHz")
-    print("Cavity frequency : "+str(frequency))
-    couple_maxi = (0,0)
-    maxi = 1000
-    for i in range(len(states)):
-        for j in range(len(states)):
-            if np.abs((energies[i]-(energies[j]+frequency))-delta_e)<maxi:
-                maxi = np.abs((energies[i]-(energies[j]+frequency))-delta_e)
-                couple_maxi = (i,j)
-
-    print("Between states #"+str(couple_maxi[0])+" and #"+str(couple_maxi[1]))
-    print("Frequency found : "+str(energies[couple_maxi[0]]-energies[couple_maxi[1]]-frequency)+" *1/2pi GHz")
-    print()
-    print(info_st(states[couple_maxi[0]], energies[couple_maxi[0]],couple_maxi[0]))
-    print(info_st(states[couple_maxi[1]], energies[couple_maxi[1]],couple_maxi[1]))
-
-if 1==1:
-    e_delta = -0.85*U
-    psi0 = singlet
-    n = 4500
-    times = np.linspace(0,1000,n)
-    k = np.arange(n)
-    Fs = n/(times[-1]-times[0])
-    print("Sample frequency : "+str(Fs))
-    print("Fmin : 4")
-    frq = np.linspace(0, Fs/2, int(n/2))*2*np.pi
-    H,_,_ = Hamiltonian(e_sum, e_delta,5, 0.1, 0.4)
-    [nn, ss] = H.eigenstates()
-
-
-    observ = [nL, nR, aLeft.dag()*aLeft, aRight.dag()*aRight]
-    result = qt.mesolve(H, psi0, times, [], observ)
-#    
-#    exp_nL, exp_nR, exp_aL, exp_aR = [], [], [], []
-#    for t, tim in enumerate(times):
-#        exp_nL.append(result.expect[0][t])
-#        exp_nR.append(result.expect[1][t])
-#        exp_aL.append(result.expect[2][t])
-#        exp_aR.append(result.expect[3][t])
-    #FFT    
-    YL_FFT = np.abs(np.fft.fft(result.expect[2]-np.max(result.expect[2])/2))/n
-    YL_FFT = YL_FFT[range(int(n/2))]
-    YR_FFT = np.abs(np.fft.fft(result.expect[3]-np.max(result.expect[3])/2))/n
-    YR_FFT = YR_FFT[range(int(n/2))]
-    #end FFT
-    plt.show()
-    plt.close('all')
-    fig, ax = plt.subplots(2,1)
-    ax[0].set_title("Evolution for e_delta = "+str(np.round(e_delta/U,3))+"U")
-    ax[0].plot(times, result.expect[2], label='left')
-    ax[0].plot(times, result.expect[3], label='right')
-    ax[0].set_xlabel("Time")
-    ax[0].set_ylabel("<âa>")
-    ax[0].legend()
-    
-    ax[1].plot(frq, YL_FFT, label="FFT_L")
-    ax[1].plot(frq, YR_FFT, label='FFT_R')
-    ax[1].set_ylabel("amplitude")
-    ax[1].set_xlabel("frequency")
-    ax[1].legend()
-    plt.show()
-    
-if 1==0:
-    g = 0.4
-    es = np.linspace(-U,-0.97*U, 100)
-    Y = []
-    y = []
-    y2 = []
-    alphaL, alphaR = [], []
-    gtot = []
-    st_1, st_2 = [],[]
-    for i_e, e_delta in enumerate(es):
-        print(i_e)
-        A = 1/((b_r-b_l)-(U+e_delta))*1/(-(b_l+b_r)-(U+e_delta))
-        B = -1/((b_l-b_r)-(U+e_delta))*1/(-(b_l+b_r)-(U+e_delta))
-        A2 = 1/((b_r-b_l)-(U-e_delta))*1/(-(b_l+b_r)-(U-e_delta))
-        B2 = -1/((b_l-b_r)-(U-e_delta))*1/(-(b_l+b_r)-(U-e_delta))
-        y.append(tee**2*np.sin(theta)/np.sqrt(2)*(A-B))
-        y2.append(tee**2*np.sin(theta)/np.sqrt(2)*(A2-B2))
-        aL, aR,nrjs = evaluate(e_sum, e_delta, 5,0.1)
-        alphaL.append(aL)
-        alphaR.append(aR)
-        st_1.append(nrjs[48])
-        st_2.append(nrjs[50])
-        gtot.append(g*(aL-aR))
-    es /=U
-#    plt.plot(es, y,label="alpha_L")
-#    plt.close('all')
-    fig, ax = plt.subplots(2,1)
-    ax[0].plot(es, y, '--', label="1st order")
-    ax[0].plot(es, alphaL, '*', label="exact diag")
-    ax[0].set_ylabel("alpha_R")
-    ax[0].set_xlabel("e_delta")
-    ax[0].legend()
-    
-    ax[1].plot(es, y2, '--', label="1st order")
-    ax[1].plot(es, alphaR, '*', label="exact diag")
-    ax[1].set_ylabel("alpha_L")
-    ax[1].set_xlabel("e_delta")
-    ax[1].legend()
-    #ax.title("alphaL and alphaR coefficients")
-    fig, ax = plt.subplots()
-    #ax.scatter(es,st_1)
-    #ax.scatter(es,st_2)
-    ax.plot(es, gtot, '*', label="exact      diag")
-    ax.set_ylabel("g*(alpha_L - alpha_R) (GHz)")
-    ax.legend()
-    ax.set_xlabel("e_delta/U")
-    plt.show()
-    
+plt.close('all')
+fig, ax = plt.subplots(2,1)
+ax[0].set_title("Evolution for e_delta = "+str(np.round(X.e_delta/X.U,3))+"U")
+ax[0].plot(times, result.expect[2], label='singlet')
+ax[0].plot(times,result.expect[3], label='triplet')
+ax[0].set_xlabel("Time")
+ax[0].set_ylabel("<âa>")
+ax[0].legend()
+plt.show()
+###
