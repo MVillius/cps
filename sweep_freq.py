@@ -152,22 +152,23 @@ arrondi = 10
 U = 25
 tees = np.linspace(2,2,1)
 FLEX_TMAX = False #Allocation dynamique du nombre de points
-MAX_T = 5000 #Nombre de points maximum utilisé pour la simulation temporelle QuTip
-MAX_POINTS = 8 #Nombre de points pour la recherche dichotomique
+MAX_T = 25000 #Nombre de points maximum utilisé pour la simulation temporelle QuTip
+MAX_POINTS = 15  #Nombre de points pour la recherche dichotomique
 INCREASE = 1.5 #facteur de multiplication du nombre de points
 
 for tee in tees:
-    X = Params(40, 0, 6.5,5.5, U, 0, np.pi/2, 0.2, tee,1) #e_s, e_d, b_l, b_r,U, Um,theta, g,te, teh)
+    X = Params(40, 0, 6.5,5.5, U, 0, np.pi/2, 1, tee,1) #e_s, e_d, b_l, b_r,U, Um,theta, g,te, teh)
     history =  {}
     #Initialisation des valeurs min/max
+    hint = tee**2/U
 
-    shift_freq_high = 0.02
-    shift_freq_low = -0.02
+    shift_freq_high = hint + 0.1
+    shift_freq_low = hint - 0.1
 
     if FLEX_TMAX:
         Tmax = 200
     else:
-        Tmax = 5000 
+        Tmax = 25000 
     #Recherche du maximum par recherche dichotomique
     for i in range(0,MAX_POINTS):
         print("frequence low : {}".format(shift_freq_low))
@@ -198,7 +199,7 @@ for tee in tees:
             iMax = np.argmax(result_high.expect[2])
             while FLEX_TMAX and np.abs(times[iMax]-Tmax) < 20 and Tmax<2000:
                 Tmax = INCREASE*Tmax 
-                print("Increasing Tmax up to {}".format(Tmax))
+                print("Increasing Tmax up to {}".format(Tmax))+
                 times = np.linspace(0,Tmax,Tmax*20)
                 result_high = qt.mesolve(H_high, psi0, times, [], observ)
                 iMax = np.argmax(result_high.expect[2])
