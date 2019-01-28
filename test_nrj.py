@@ -77,7 +77,7 @@ tp =LUpKp.dag()*RUpKp.dag()
 singlet /= singlet.norm()
 triplet = (LUpKp.dag()*RDoKp.dag()+LDoKp.dag()*RUpKp.dag())*vac
 triplet /= triplet.norm()
-triplet_p = LUpKp.dag()*RUpKp.dag()*vac
+triplet_p = LUpKp.dag()*RUpKp.dag()*vac+
 triplet_m = LDoKp.dag()*RDoKp.dag()*vac
 
 #Etats d'intérêt
@@ -269,7 +269,7 @@ def Hamiltonian(p,e_sum, e_delta, b_l, b_r, theta, shift_l,shift_r,g=1):
         Htee = p.tee*np.cos(p.theta/2)*(LUpKp.dag()*RUpKp + LDoKp.dag()*RDoKp) +\
                p.tee*np.sin(p.theta/2)*(-LUpKp.dag()*RDoKp + LDoKp.dag()*RUpKp)
         Htee += Htee.dag()
-        Hcavite = p.g*singlet.overlap(nL*triplet_p)*(s_.dag()*tp+tp.dag()*s_)*(aLeft+aLeft.dag()) + p.g*nR*(aRight+aRight.dag())
+        Hcavite = p.g*nL*(aLeft+aLeft.dag()) + p.g*nR*(aRight+aRight.dag())
         Hphoton = omega0L*(aLeft.dag()*aLeft)+omega0R*(aRight.dag()*aRight)
         H = Hchem + Hint + Htee + Hteh + Hcavite + Hphoton
         H_p = Hchem + Hint + Hphoton
@@ -368,17 +368,24 @@ def evaluate(e_sum, e_delta, e_mag, e_asym):
 
 
 ## Parameters
-X = Params(50, 0, 6.5,5.5 ,50, 0, np.pi/2, 0.2, 1,1) #e_s, e_d, b_l, b_r,U, Um,theta, g,te, teh)
-n = 7000   
+X = Params(40, 0, 6.5,5.5 ,200,0, np.pi/2, 1, 1,1) #e_s, e_d, b_l, b_r,U, Um,theta, g,te, teh)
+n = 50000 
 ###
-
-times = np.linspace(0,1000,n)
+    
+times = np.linspace(0,4500,n)
 psi0 = singlet
-H,_,_ = Hamiltonian(X, X.e_sum, X.e_delta, X.b_l, X.b_r,X.theta,0.0059,0, 1) 
+H,_,_ = Hamiltonian(X, X.e_sum, X.e_delta, X.b_l, X.b_r,X.theta,0.00759,0, 1) 
 [nn, ss] = H.eigenstates()
-observ = [nL, nR, aLeft.dag()*aLeft, aRight.dag()*aRight]
-result = qt.mesolve(H, psi0, times, [], observ)
+#observ = [nL, nR, aLeft.dag()*aLeft, aRight.dag()*aRight]
 
+result = qt.mesolve(H, psi0, times, [], [])
+tps, tms, als, ars = [],[],[],[]
+for i in range(len(result.states[i])):
+    tps.append(np.abs(tp.overlap(result.states[i]))**2)
+    tms.append(np.abs(tm.overlap(result.states[i]))**2)
+    als.append(qt.expect(aLeft.dag()*aLeft, result.states[i]))
+    ars.append(qt.expect(aRight.dag()*aRight, result.states[i])
+print(np.max(result.expect[2]))
 ### Plot
 plt.show()
 plt.close('all')
